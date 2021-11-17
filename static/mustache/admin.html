@@ -1,0 +1,43 @@
+---
+parent: base.html
+title: Admin Control Panel
+---
+
+<p>Some tools for the owner of this maze to use.</p>
+
+<section id="regenerate-everything" class="pronounced-row">
+<input class="to-be-described button full" type="button" value="regenerate everything" onclick="regenerateEverything();" />
+<p class="description">Recreate the entire site. This will copy over new styles, refresh room pages, everything!</p>
+</section>
+
+<!-- could automate this with a mustache macro or something? include? -->
+<section id="regenerate-specific-room" class="pronounced-row">
+
+<form autocomplete="off" class="bar-of-items">
+    <div class="bar-of-items-focus">
+    <input type="text" class="focus-can-be-full editable to-be-described" name="q" id="q" oninput="showResults(this.value, 'regenerate-room-button');" placeholder="links to room (uuid); can type description search" />
+    <div id="result" class="to-be-described"></div>
+    </div>
+    <input type="button" id="regenerate-room-button" value="regenerate room" class="button to-be-described bar-of-items-aside" onclick="regenerateRoom(document.getElementById('q').value)" disabled/>
+</form>
+
+<p class="description">Rebuild a specific room's page. You must select the correct room ID/UUID first. You can either paste in the ID/enter it in manually, or you can search for rooms by typing to search room descriptions and then click the room you want. The button will be enabled once a valid room ID is entered.</p>
+
+</section>
+
+<script src="/rest.js"></script>
+
+<section class="pronounced-row">
+<a href="/new-room.html" class="button full to-be-described">create new room</a>
+<p class="description">Make a brand new room.</p>
+</section>
+
+<section class="pronounced-row">
+    <button class="button full to-be-described" disabled>Export Maze</button>
+    <p class="description">Coming soon: Save the entire maze as a file. This is good for backups. You will be able to upload the backup in order to restore it to a former state.</p>
+</section>
+
+<section class="pronounced-row">
+    <button class="button full to-be-described dangerous-action" disabled>Import Maze</button>
+    <p class="description">Coming soon: This is dangerous! It will wipe everything and then create the maze defined in the upload.</p>
+</section>

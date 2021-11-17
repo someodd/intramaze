@@ -1,0 +1,174 @@
+---
+parent: base.html
+hideHeader: true
+title: "{{#room.title}}{{room.title}}{{/room.title}}{{^room.title}}{{room.id}}{{/room.title}}"
+extraLinks: [
+    "<a href='#' id='admin-room-tools-opener' onclick='openPortalEditor();'>Edit Room ✍</a><a id='admin-room-tools-closer' onclick='closePortalEditor();' href='#'>Close Editor ❌</a>"
+    ]
+head: |
+    <style>
+        html,body {
+            background: none !important;
+        }
+        html:before {
+        content: "";
+        position: fixed;
+        left: 0;
+        right: 0;
+        z-index: -1;
+        
+        display: block;
+
+        background-size: cover;
+        background-image: url('{{room.imagePath}}');
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 100vw;
+        height: 100vw;
+        
+        filter: blur(15px) brightness(230%) saturate(30%);
+        }
+
+        .canvas {
+            background-color: rgb(100,0,100,0.25);
+            background-image: url("{{room.imagePath}}");
+        }
+    </style>
+    <!-- from websocket demo -->
+    <script type="text/JavaScript"
+    src="https://code.jquery.com/jquery-1.6.3.min.js"></script>
+    <!-- <link rel="stylesheet" type="text/css" href="/screen.css" /> -->
+---
+
+<!-- BEGIN ADMIN ROOM TOOLS -->
+<aside id="admin-room-tools">
+    <section id="admin-room-tools-title">
+        <header>
+            <h1>Room Title 🖹</h1>
+            <p>Name of the room.</p>
+        </header>
+        <div class="to-be-described bar-of-items">
+        <input type="text" id="title" name="title" value="{{#room.title}}{{room.title}}{{/room.title}}{{^room.title}}{{room.id}}{{/room.title}}" autocomplete="off" class="bar-of-items-aside" />
+        <input type="button" value="💾 save title 💾 " onclick="updateTitle('{{room.id}}');" class="button bar-of-items-aside" id="update-title-button" />
+        </div>
+        <p class="description">This will be searchable and will appear in various places to identify the room.</p>
+
+    </section>
+    
+    <section id="admin-room-tools-description">
+        <header>
+            <h1>Room Description 💬</h1>
+            <p>Text associated with the room.</p>
+        </header>
+        <input type="hidden" value="{{room.id}}" id="roomUuid" />
+
+        <div id="description-form" class="to-be-described">
+            <textarea id="description" class="full" name="description">{{room.description}}</textarea>
+            <input type="button" value="💾 save description 💾 " class="button full" onclick="updateDescription('{{room.id}}');" id="update-description-button" />
+        </div>
+        <p class="description">Text used for vision-impaired users, for searchability, and is displayed above the room image.</p>
+    </section>
+
+    <section id="admin-room-tools-delete">
+        <header>
+            <h1>Delete Room 🗑</h1>
+            <p>Wipe <span class="small">{{room.id}}</span> from existence.</p>
+        </header>
+        <input type="button" value="⚠ delete room ⚠" onclick="deleteRoom('{{room.id}}')" class="to-be-described button dangerous-action" />
+        <p class="description">Delete this room, along with its portals, and image. This will also delete any other portals which link to this room.</p>
+    </section>
+
+    <section id="admin-room-tools-image">
+        <header>
+            <h1>New room image 🖼</h1>
+            <p>Replace the current room graphic.</p>
+        </header>
+        <!-- needs to also regenerate the room and delete portals for this room, so should have javascript override, or just make room regen a part of image upload -->
+        <form class="to-be-described bar-of-items" action="http://localhost:3000/rooms/{{room.id}}/image" method="POST" enctype="multipart/form-data" id="form">
+            <input type="file" name="image" class="bar-of-items-focus" />
+            <input type="submit" value="upload image" class="button bar-of-items-aside" />
+        </form>
+        <p class="description">Upload an image to use for the room. This action preserves any portals you've already created.</p>
+    </section>
+    
+    <section id="portal-editor" class="room-view">
+        <header>
+            <h1>Portal editor 🚪</h1>
+            <p>Create and delete polygons which link to other rooms.</p>
+        </header>
+        <dl class="how-to-use">
+            <dt>Create a portal</dt>
+            <dd>Double click to start drawing a polygon. Double click to finish drawing the polygon. Then search for rooms by their description, or simply enter the <dfn title="UUID, looks like: 4676e61e-9b11-4c42-a955-d87a683c72cb">room ID</dfn>. Make sure the field has a room ID selected. Once this is all in place you can click <em>save portal</em>.</dd>
+            <dt>View and delete existing portals</dt>
+            <dd>Click <em>existing portals</em> in order to see the room's portals. You can delete the portal by right-clicking the polygons drawn, representing the portals.</dd>
+        </dl>
+
+        <!-- below stuff should only pop up when contextually relevant, or should be disabled sometimes! there's a disabled option for buttons. -->
+        <input type="button" onclick='drawAllPortals("{{room.id}}");disableSave();' value="👁 Existing Portals 👁" class="button" />
+        <input type="button" onclick='makePortal("{{room.id}}");' value="💾 Save Portal 💾" id="save-portal-button" class="button" disabled />
+        <!-- <input type="text" placeholder="links to room (uuid)" name="linksTo" id="linksTo" /> -->
+        <!-- gotta rename and update this! -->
+        <form autocomplete="off" style="display: none;" id="selectRoomLink">
+            <input type="text" name="q" id="q" oninput="showResults(this.value, 'save-portal-button')" placeholder="links to room (uuid); can type description search" />
+            <div id="result"></div>
+        </form>
+    </section>
+</aside>        
+<!-- FIXME: this results in a bug where if user refreshes it won' tbe canvas anymore. need ot have javascript see if anchor active? or just pass off hiding and viewing to JS altogether! -->
+<!-- END ADMIN ROOM TOOLS -->
+
+<script src="https://cdn.jsdelivr.net/npm/jdenticon@3.1.1/dist/jdenticon.min.js" async
+        integrity="sha384-l0/0sn63N3mskDgRYJZA6Mogihu0VY3CusdLMiwpJ9LFPklOARUcOiWEIGGmFELx"
+        crossorigin="anonymous">
+</script>
+
+<script type="module">
+    import { identiconSvg } from "/minidenticons.min.js"
+</script>
+
+<section id="portal-editor-canvas-area">
+    <div class="canvas-container"><canvas id="polygonCanvas" class="canvas"></canvas></div>
+</section>
+<!-- The room being presented as an imagemap. -->
+<section id="room-view">
+    <!-- image map generation magic here-->
+    <!-- should be able to edit the room somehow..?  button? or something? -->
+    <img src="{{room.imagePath}}" alt="{{room.description}}" title="{{room.description}}" id="dynamic_img" usemap="#roommap" onload="overlayCanvas();"/>
+    <map name="roommap">
+    {{#room.areas}}<area shape="poly" coords="{{coords}}" href="/rooms/{{href}}"/>{{/room.areas}}
+    </map>
+    <div id="roomChatCanvas"></div>
+</section>
+
+<h1 id="page-title">{{title}}</h1>
+<p id="room-description">{{room.description}}</p>
+
+<!-- This needs to actually overlay on the room... -->
+<section id="room-chat">
+    <div id="main">
+        <div id="warnings">
+        </div>
+        <div id="join-section">
+            <h2>Join</h2>
+            <form id="join-form" action="javascript: void(0)">
+                <label for="user">Username: </label>
+                <input id="user" type="text" size="12" />
+                <input id="welcome" type="submit" value="Join" />
+            </form>
+        </div>
+        <div id="chat-section" style="display: none">
+            <h2>Chat</h2>
+            <div id="messages">
+            </div>
+            <br />
+            <form id="message-form" action="javascript: void(0)">
+                <input id="text" type="text" size="40" />
+                <input id="talk" type="submit" value="Send" />
+            </form>
+        </div>
+    </div>
+</section>
+
+<script type="text/JavaScript" src="/client.js"></script>
+<script src="/rest.js"></script>
+<script src="/portal-editor.js"></script>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content=width=device-width, initial-scale=1" />
+    <title>{{title}} - pinksands</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Cinzel:wght@900&family=M+PLUS+2&family=Open+Sans&display=swap" rel="stylesheet"> 
+    
+    <link rel="stylesheet" href="/sitestyle.css" />
+    {{{head}}}
+  </head>
+  <body>
+    <header id="main-header" class="full-width bar-of-items">
+      <nav id="site-navigation">
+        <ul class="bar-of-items">
+          <li><h1><a href="/">pinksands</a></h1></li>
+          <li><a href="/admin.html">admin</a></li>
+          <li><a href="https://github.com/someodd/pinksands/">made by someodd</a></li>
+          {{#extraLinks}}
+          <li>{{.}}</li>
+          {{/extraLinks}}
+        </ul>
+      </nav>
+    </header>
+
+    <section id="main-content">
+      {{^hideHeader}}
+      <header>
+        <h1 id="page-title">{{title}}</h1>
+      </header>
+      {{/hideHeader}}
+      {{{child}}}
+    </section>
+
+    <footer id="main-footer">
+      <a href="https://github.com/someodd/pinksands/">pinksands by someodd</a>
+    </footer>
+  </body>
+</html>

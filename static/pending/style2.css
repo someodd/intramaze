@@ -1,0 +1,81 @@
+:root {
+  --light-pink: #f2b3c4;
+  --dark-pink: #d991b3;
+  --dark-blue: #0bb3d9;
+  --teal: #04adbf;
+  --light-blue: #25d9d9;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+* {
+ margin: 0;
+ padding: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  font-family: 'Fredoka One', cursive;
+  font-size: 16px;
+  line-height: 1.5rem;
+}
+
+html {
+  background-image: linear-gradient(var(--light-pink), var(--dark-pink));
+}
+
+@keyframes waves {
+  from {
+    background-image: radial-gradient(ellipse farthest-corner at 0 140%, #fff 0%, var(--light-blue) 70%, var(--dark-blue) 70%, var(--teal) 70%); 
+  background-size: 100vw 6rem;
+  }
+  to {
+    background-image: radial-gradient(ellipse farthest-corner at 140% 0%, #fff 0%, var(--light-blue) 70%, var(--dark-blue) 70%, var(--teal) 70%);
+  background-size: 100vw 3rem;
+  }
+}
+
+@keyframes foam {
+  from {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2)); 
+  background-size: 100vw 7rem;
+  }
+  to {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6)); 
+  background-size: 100vw 5rem;
+  }
+}
+
+
+body {
+  animation-delay: 0s;
+    animation: foam 10s alternate infinite;
+  background-repeat: no-repeat
+}
+
+/* can layer, add behind a white one for foam */
+#site-header {
+  animation-delay: 1s;
+  padding-top: 1.5rem;
+    animation: waves 10s alternate infinite;
+  background-repeat: no-repeat
+
+}
+
+#site-header nav {
+  font-size: 1.3rem;
+}
+
+#site-header h1 {
+  font-size: 6rem;
+  line-height: 6rem;
+}
+
+a {
+  color: #fff;
+}
+
+#main {
+  padding-top: 3rem;
+}

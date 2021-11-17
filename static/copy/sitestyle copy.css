@@ -1,0 +1,144 @@
+:root {
+  --light-pink: #f2b3c4;
+  --dark-pink: #d991b3;
+  --dark-blue: #0bb3d9;
+  --teal: #04adbf;
+  --light-blue: #25d9d9;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+* {
+ margin: 0;
+ padding: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  font-family: 'Fredoka One', cursive;
+  font-size: 16px;
+  line-height: 1.5rem;
+}
+
+html {
+  background-image: linear-gradient(var(--light-pink), var(--dark-pink));
+}
+
+
+body {
+  background-repeat: no-repeat;
+  background-image: linear-gradient(var(--light-blue), var(--dark-blue));
+  background-size: 100vw calc(9rem - 12px);
+
+  border-bottom: 1px solid #fff;
+
+  min-height: 100vh;
+
+  display: grid;
+  flex-direction: column;
+}
+
+/* can layer, add behind a white one for foam */
+#site-header {
+  padding-top: 1.5rem;
+}
+
+#site-header nav {
+  font-size: 1.3rem;
+}
+
+#site-header h1 {
+  margin-top: 1.5rem;
+  font-size: 6rem;
+  line-height: 6rem;
+  background-image: linear-gradient(45deg, #f3ec78, #af4261);
+  background-clip: text;
+  text-fill-color: transparent;
+  background-repeat: repeat;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; 
+  -moz-background-clip: text;
+  -moz-text-fill-color: transparent;
+  -webkit-filter: drop-shadow(0px 2px 2px #333);
+          filter: drop-shadow(0px 2px 2px #333);
+  z-index: 100;
+  text-align: center;
+  padding: 0 0 1.5rem 0;
+}
+
+.content-container {
+  padding: 0 20px;
+  width: 960px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  display: block;
+}
+
+a {
+  color: #fff;
+}
+
+#main {
+  padding-top: 3rem;
+}
+
+.toolbar {
+  /* Used for displaying a number of things like links or other commands in sequence as a bar. */
+  display: block;
+}
+
+.toolbar-item-container {
+  display: block;
+}
+
+ul.toolbar-item-container {
+  list-style-type: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap: 16px;
+}
+
+.toolbar-item-container > * > a {
+  background-color: #333;
+  text-align: center;
+  display: block;
+}
+
+#main {
+  flex-grow: 1;
+}
+
+.full-width {
+  text-align: center;
+  margin-left: calc(-100vw / 2 + 960px / 2);
+  margin-right: calc(-100vw / 2 + 960px / 2);
+}
+
+/* try to make stuff as reusable and less specific as possible */
+
+body:before {
+  /* Doing a trick to get arches to work! */
+  display: none;
+
+  z-index: 100;
+
+  background-image: url(/style-assets/arch-middle.png), url(/style-assets/arch-left.png), url(/style-assets/arch-right.png);
+  background-position: center top, left top, right top;
+  background-repeat: repeat-x, no-repeat, no-repeat;
+
+  content: ' ';
+  position: fixed;
+  height: 9rem;
+  width: 100vw;
+}
+
+#site-footer {
+  padding-top: 3rem;
+  background-color: #333;
+  display: block;
+  width: 100vw;
+  padding-bottom: 1.5rem;
+  margin-top: 3rem;
+  box-sizing: border-box;
+}

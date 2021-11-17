@@ -1,0 +1,640 @@
+/*
+CSS RESET
+Thanks to piccalil.li
+*/
+
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Remove default margin */
+body,
+h1,
+h2,
+h3,
+h4,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+/* Set core root defaults */
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* Set core body defaults */
+body {
+  min-height: 100vh;
+  text-rendering: optimizeSpeed;
+  line-height: 1.5;
+  padding: 0 20px 1.5rem 20px;
+  /*display: grid;*/
+}
+
+/* A elements that don't have a class get default styles */
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+}
+
+/* Make images easier to work with */
+img,
+picture {
+  max-width: 100%;
+  display: block;
+}
+
+/* Inherit fonts for inputs and buttons */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Remove all animations, transitions and smooth scroll for people that prefer not to see them */
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+   scroll-behavior: auto;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+Begin real CSS.
+*/
+
+:root {
+  /* Semantic colors*/
+  --action-values: 58, 59, 112;
+  --action-strong: rgba(var(--action-values), 1);
+  --action-weak: rgba(var(--action-values), 0.5);
+  --editable: rgba(255, 255, 255, 0.5);
+
+  /* Spacing */
+  --major-horizontal-spacing: 20px;
+  --minor-horizontal-spacing: 10px;
+}
+
+a:link,
+a:visited {
+  color: var(--action-strong);
+}
+
+html,
+body {
+ font-size: 20px;
+ font-family: 'Open Sans', sans-serif;
+ overflow-wrap: break-word;
+ word-spacing: 0.15em;
+ background-color: #eee;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Lora', serif;
+  font-weight: 700;
+  word-spacing: -0.1em;
+  width: 66em;
+  max-width: 100%;
+  letter-spacing: -0.05em;
+  font-kerning: normal;
+}
+
+h1 {
+  font-size: 2.75rem;
+  margin: 2.25rem 0 0.75rem;
+  font-kerning: normal;
+  text-transform: lowercase;
+}
+
+h2 {
+  font-size: 3rem;
+  margin: 1.5rem 0;
+}
+
+
+.full-width {
+  /*
+  A block of content hat goes outside the page's margins
+  and is the full width of the viewport.
+
+  do not confuse with .full.
+  */
+  margin-left: calc(-1 * var(--major-horizontal-spacing));
+  width: calc(100vw + var(--major-horizontal-spacing));
+  padding-left: var(--major-horizontal-spacing);
+  padding-right: var(--major-horizontal-spacing);
+}
+
+.bar-of-items {
+  /*
+  horizontal row of items than can become a column
+  of items each getting their own line.
+  */
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+
+}
+
+ul.bar-of-items {
+  list-style-type: none;
+  list-style-position: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bar-of-items-aside {
+  /*
+  an item in a bar of items which takes minimal
+  space.
+  */
+  width: min-content;
+  flex-shrink: 3;
+  flex-basis: 1;
+  flex-grow: 1;
+}
+
+.bar-of-items-full {
+  /*
+  ignores the flex box rules and just
+  is 100% wide
+  */
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.bar-of-items-focus {
+  /*
+  the main focus of a bar of items. will take
+  the maximal size.
+  */
+  /*width: max-content;*/
+  flex-shrink: 0;
+  flex-basis: 3;
+  flex-grow: 9;
+  max-width: 100%;
+}
+
+.pronounced-row {
+ /*
+ when you have a row/bar of content
+ that needs to stand apart from other
+ content using margin.
+ */
+ margin-top: 3rem;
+ margin-bottom: 3rem;
+ width: 100%;
+}
+
+.full {
+  /* Simply a 100% width. not to be confused with .full-width! */
+  width: 100%;
+}
+
+.focus-can-be-full {
+  width: 100%;
+}
+
+.focus-can-be-full:focus {
+  max-width: 100%;
+}
+
+dd.tools {
+  /*
+  When there's a list of tools, like buttons,
+  that need to be described, with clear
+  associations.
+  */
+}
+
+.to-be-described {
+  /*
+  Content that is to be described.
+  */
+  margin-bottom: 0 !important;
+}
+.description {
+  /*
+  describes a .to-be-described.
+
+  maybe better named "describes-prior."
+  */
+  margin-top: 0;
+  padding: 0 var(--minor-horizontal-spacing);
+}
+
+.dangerous-action:hover {
+  /*
+  An action, like a button, which have
+  dangerous actions if engaged.
+  */
+  background-color: #f59999 !important;
+  color: #740707 !important;
+}
+
+.button {
+  line-height: 3rem;
+  padding: 0 1em;
+  border: none;
+  background-color: var(--action-weak);
+  color: #fff !important;
+  display: inline-block;
+  margin: 0;
+  text-decoration: none;
+  text-align: center;
+}
+
+.small {
+  /* Extra small text */
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  word-wrap: break-all;
+}
+
+/* generalized and semanticified style above */
+
+
+*:disabled {
+  filter: grayscale() brightness(20%);
+  cursor: not-allowed;
+}
+
+*:disabled:hover {
+  cursor: not-allowed !important;
+}
+
+/* slightly less generalized above */
+
+#main-header {
+  background-color: var(--action-strong);
+  color: #fff;
+}
+
+#main-header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  line-height: 1.5rem;
+  display: inline;
+}
+
+
+/* instead do with grid or flexbox gutters FIXME */
+#main-header li + li {
+  margin-left: 10px;
+}
+
+#main-header a {
+  color: #fff;
+  font-weight: 700;
+  line-height: 1.5rem;
+}
+
+#main-header a + a {
+  margin-left: 10px;
+}
+
+#main-header a:hover {
+  background-color: 
+}
+
+p {
+  width: 66em;
+  max-width: 100%;
+  /*text-align: justify;
+  text-justify: inter-character;
+  overflow-wrap: break-word;*/
+}
+
+#site-navigation {
+  text-transform: lowercase;
+}
+
+#site-navigation li {
+  /*width: 66em;*/
+}
+
+/*
+room page stuff
+*/
+
+#admin-room-tools {
+  margin-top: 1.5rem;
+  display: none;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto;
+  grid-template-areas:
+    "title image delete "
+    "description portal portal";
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+  column-gap: 10px;
+  row-gap: 1.5rem;
+  justify-items: stretch;
+  justify-content: stretch;
+  align-content: stretch;
+}
+
+#admin-room-tools p,
+#admin-room-tools h1,
+#admin-room-tools h2 {
+  width: 100%;
+}
+
+#admin-room-tools:target {
+  display: grid;
+  /* grid-template-columns: 50px 50px 50px 50px; */
+}
+
+#admin-room-tools-header {
+  grid-area: header;
+  background-color: rgba(217, 255, 0, 0.4);
+}
+
+#admin-room-tools-delete {
+  grid-area: delete;
+  background-color: rgba(247, 0, 255, 0.4);
+}
+
+#admin-room-tools-description {
+  grid-area: description;
+  background-color: rgba(0, 238, 255, 0.4);
+}
+
+#admin-room-tools-image {
+  grid-area: image;
+  background-color: rgba(9, 255, 0, 0.4);
+}
+
+#admin-room-tools-title {
+  grid-area: title;
+  background-color: rgba(235, 152, 152, 0.4);
+}
+
+#portal-editor {
+  grid-area: portal;
+  background-color: rgba(255, 251, 0, 0.4);
+}
+
+#admin-room-tools-opener {
+  display: inline-block;
+}
+
+#admin-room-tools:target + #admin-room-tools-opener {
+  display: none;
+}
+
+#admin-room-tools section h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+#admin-room-tools-title {
+  grid-area: title;
+}
+
+#admin-room-tools section h1 + p {
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+#admin-room-tools header + p {
+  margin-bottom: 1.5rem;
+}
+
+#description {
+  /*
+  width: 66em;
+  min-height: 9rem;
+  */
+
+  min-height: 6rem;
+
+}
+
+#description,
+input[type=text] {
+  margin: 0;
+  display: block grid !important;
+  box-sizing: border-box;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: none;
+  padding: 0.75rem 10px;
+}
+
+input.side-by-side {
+  display: block flex !important;
+}
+
+#description {
+  display: block;
+}
+
+header p {
+  margin: 0;
+}
+
+#description:focus,
+input[type=text]:focus {
+  background-color: #fff;
+}
+
+
+
+input[type=file] {
+  border: none;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+
+
+#admin-room-tools input[type=submit],
+#admin-room-tools input[type=button],
+#admin-room-tools .button {
+  margin-bottom: 0;
+}
+
+#admin-room-tools section input:last-of-type {
+  margin-bottom: 0;
+}
+
+input[type=button]:hover,
+input[type=submit]:hover,
+.button:hover {
+    cursor: pointer;
+    text-decoration: underline;
+    background-color: var(--action-strong);
+    /*background-color: rgba(255, 255, 255, 0.5);
+    color: #000;*/
+    height: 3rem;
+    /*border-bottom: 4px dashed #000;*/
+}
+
+#update-description-button {
+  /*width: 66em;*/
+}
+
+dl.how-to-use {
+  margin: 1.5rem 0;
+}
+
+dl.how-to-use dt {
+  font-weight: 700;
+}
+
+dl.how-to-use dd {
+  margin-left: 20px;
+}
+
+#dynamic_img {
+  /* the room image itself */
+  margin: 1.5rem var(--major-horizontal-spacing);
+}
+
+.button[href="#admin-room-tools-opener"] {
+  box-sizing: border-box;
+}
+
+#result dl {
+  background-color: var(--editable);
+
+
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
+  box-sizing: border-box;
+  justify-items: stretch;
+  justify-content: stretch;
+  align-content: stretch;
+}
+
+#result dt {
+  font-weight: 900;
+  background-color: var(--editable);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 100%;
+  min-width: 0;
+white-space: nowrap;
+display: block;
+
+}
+
+#result dd {
+  min-height: 4.5rem;
+  padding-left: 10px;
+  background-color: var(--editable);
+  backdrop-filter: blur(15px) brightness(190%) saturate(40%);
+}
+
+#result dd img {
+  float: left;
+  margin-right: 10px;
+}
+
+#result .result {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+#result .result:hover dt,
+#result .result:hover dd {
+  background-color: rgba(255,255,255,0.75) !important;
+}
+
+/*
+for debugging
+* {
+  outline: 1px solid #f00 !important;
+}
+*/
+
+#room-view {
+  display: block;
+  margin-left: -20px;
+  position: relative;
+}
+
+#room-view img {
+  position: relative;
+}
+
+#room-view img {
+  display: block;
+  object-fit: none;
+  max-width: none !important;
+}
+
+#roomChatCanvas {
+  position: relative;
+}
+
+#main-footer {
+  display: none;
+}
+
+#portal-editor-canvas-area {
+  display: none;
+  margin: 0 auto;
+}
+
+.canvas {
+  z-index: 1;
+  border: 4px solid red;
+  display: block;
+}
+
+.canvas-container:before {
+  background-color: red;
+  color: white;
+  text-orientation: mixed;
+  content: "EDIT MODE";
+  display: inline-block;
+  font-weight: 700;
+  text-align: center;
+  z-index: 9999;
+  padding: 0 20px;
+}
+
+#admin-room-tools-closer {
+  display: none;
+}
+
+identicon-svg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #EEF;
+  display: inline-block;
+  margin: 5px;
+}
+
+.speechBalloon {
+
+}
