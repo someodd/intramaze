@@ -38,6 +38,7 @@ import Web.Scotty (Parsable)
 import Web.Scotty.Trans (Parsable(parseParam))
 --import GHC.Base (Eq)
 import Web.PathPieces (PathPiece(..))
+--import qualified Data.ByteString as BS
 
 -- FIXME: should use actual
 -- polygon in database instead. how does JSON statement here work?
@@ -127,11 +128,27 @@ instance PersistField RoomUUID where
   fromPersistValue persistValue = Left . T.pack $ "Invalid UUID:" ++ show persistValue
 
 
+{-
+User json
+  username Text
+  password BS.ByteString
+  salt BS.ByteString
+  UniqueUsername username
+-}
+
+-- change roomuuid to uuid! FIXME (account should not be roomuuid but instead just Uuid! or DbUuid or something)
+
 -- Portal needs to make belongsTo+coordinates unique?
 -- this should all link together using roomID not RoomId. we want
 -- to link using UUIDs not autoincrement ids.
 -- should i use actual integer ids or room uuids
 share [mkMigrate "migrateAll", mkPersist sqlSettings] [persistLowerCase|
+Account json
+  Id RoomUUID default=gen_random_uuid()
+  username Text
+  password Text
+  UniqueUsername username
+
 Portal json
   belongsTo RoomId
   linksTo RoomId
@@ -143,5 +160,6 @@ Room json
   title Text Maybe
   description Text Maybe
   bgFileName Text Maybe
+  author AccountId
   deriving Show
 |]

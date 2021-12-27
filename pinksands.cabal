@@ -1,5 +1,5 @@
 cabal-version:      2.4
-name:               socialmaze
+name:               pinksands
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
@@ -29,7 +29,7 @@ common shared-properties
   -- Base language which the package is written in.
   default-language:    Haskell2010
 
-executable socialmaze
+executable pinksands
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
@@ -39,7 +39,7 @@ executable socialmaze
     -- other-extensions:
     build-depends:
         base ^>=4.14.3.0,
-        socialmaze
+        pinksands
     hs-source-dirs:   app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
     import: shared-properties
@@ -52,6 +52,8 @@ library
         base ^>=4.14.3.0,
         text,
         uuid,
+        memory,
+        either,
         time,
         persistent,
         utf8-string,
@@ -59,8 +61,12 @@ library
         path-pieces,
         filepath,
         directory,
+        libjwt-typed,
+        monad-time,
+        cryptonite,
         bytestring,
         monad-logger,
+        cryptonite,
         mtl,
         transformers,
         aeson,
@@ -81,13 +87,20 @@ library
         scotty,
         persistent-postgresql,
         frontmatter,
-        http-types,
+        http-types
+        , jose-jwt
+        , regex-compat
+        , text-show
+        , time
     ghc-options: -Wall -Werror
     build-depends: websockets
     exposed-modules:
+        PinkSands.JWT
         PinkSands
         PinkSands.Models
         PinkSands.Static
         PinkSands.ChatWebSocket
         PinkSands.Middle
+        PinkSands.JsonRequests
+        PinkSands.Actions
         Template

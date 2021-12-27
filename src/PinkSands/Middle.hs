@@ -2,13 +2,21 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 module PinkSands.Middle where
 
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Reader (MonadReader, ReaderT, asks)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Text.Lazy as TL (Text)
 import qualified Database.Persist.Postgresql as DB
+import Data.Aeson (ToJSON)
+import GHC.Generics (Generic)
 
+
+data ApiError = ApiError { errorMessage :: String } deriving (Generic, Show)
+instance ToJSON ApiError where
+  
 
 data Environment
   = Development
@@ -35,3 +43,5 @@ runDB :: (MonadTrans t, MonadIO (t ConfigM)) =>
 runDB q = do
   p <- lift (asks pool)
   liftIO (DB.runSqlPool q p)
+
+type Error = TL.Text
