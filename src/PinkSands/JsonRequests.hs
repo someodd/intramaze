@@ -12,49 +12,26 @@ module PinkSands.JsonRequests where
 
 import Control.Monad (MonadPlus (mzero))
 import qualified Data.Aeson as Aeson (FromJSON(..), Value (..))
-import Data.Aeson ((.:))
 import GHC.Generics ( Generic )
 import qualified Data.Text.Encoding as TSE
 import qualified Data.ByteString as ByteString (ByteString)
-import Web.Scotty.Trans (ActionT, jsonData, status)
+import Web.Scotty.Trans (ActionT, jsonData, status, json, finish)
 
 import qualified PinkSands.JWT as JWT (UserClaims(..), decodeAndValidateFull)
-import qualified PinkSands.Models as Models (Room(..), Key(..), RoomUUID(..))
+import qualified PinkSands.Models as Models (Room(..), EntityField(..))
 import PinkSands.Middle (ConfigM, Error, ApiError(..))
 import Control.Monad.IO.Class (liftIO)
-import Web.Scotty.Trans (json, finish)
 import Network.HTTP.Types.Status (notFound404)
-import PinkSands.Models (EntityField(..), Room, Portal)
 import qualified Database.Persist as DB
 import Database.Persist (Update)
 import Data.Maybe (catMaybes)
-import qualified Data.Text as T
-
-
--- | My hacky way of having something like `Room`, without the requirement of
--- specifying the room's author during a request (that's already in the token).
---
--- Maybe this is a bad idea and I should force the user to specify the author
--- always so you can also change the author?
-data UnownedRoom = UnownedRoom
-    { unownedRoomTitle :: Maybe T.Text
-    , unownedRoomDescription :: Maybe T.Text 
-    , unownedRoomBgFileName :: Maybe T.Text
-    } deriving (Generic, Show, Aeson.FromJSON)
 
 
 -- | Many room requests (JSON) use this format.
 data GenericRoomRequestUnvalidated = GenericRoomRequestUnvalidated
-    { genericRoomRequestUnvalidatedRoom :: UnownedRoom
+    { genericRoomRequestUnvalidatedRoom :: Models.Room
     , genericRoomRequestUnvalidatedToken :: Token
-    } deriving (Generic, Show)
-
-
-instance Aeson.FromJSON GenericRoomRequestUnvalidated where
-    parseJSON (Aeson.Object v) = GenericRoomRequestUnvalidated
-        <$> (v .: "room")
-        <*> (v .: "token")
-    parseJSON _ = mzero
+    } deriving (Generic, Show, Aeson.FromJSON)
 
 
 data GenericRoomRequestValidated = GenericRoomRequestValidated
@@ -78,17 +55,7 @@ class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
         failLeft maybeValidJson
 
 
--- | Similar to `UnownedRoom`, this makes it so you do not have to specify
--- a field that is already indicated somewhere else. Namely, the room it
--- is a part of...
---data UnlinkedPortal = UnlinkedPortal
-data CreatePortalUnvalidated = CreatePortalUnvalidated
-    { createPortalUnvalidatedPortal :: Portal 
-    , createPortalUnvalidatedToken :: Token 
-    } deriving (Generic, Show)
-
-
-data RoomUpdateValidated = RoomUpdateValidated JWT.UserClaims [Update Room] deriving (Generic)
+data RoomUpdateValidated = RoomUpdateValidated JWT.UserClaims [Update Models.Room] deriving (Generic)
 
 
 instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated where
@@ -99,10 +66,10 @@ instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated wher
             room = genericRoomRequestUnvalidatedRoom roomUnvalidated
             -- FIXME: I feel like this should be possible with some more abstraction so
             -- I don't need to be explicit here...
-            (transformedList :: [Maybe (Update Room)]) =
-                [ unownedRoomTitle room >>= Just . (RoomTitle DB.=.) . Just
-                , unownedRoomDescription room >>= Just . (RoomDescription DB.=.) . Just
-                , unownedRoomBgFileName room >>= Just . (RoomBgFileName  DB.=.) . Just
+            (transformedList :: [Maybe (Update Models.Room)]) =
+                [ Models.roomTitle room >>= Just . (Models.RoomTitle DB.=.) . Just
+                , Models.roomDescription room >>= Just . (Models.RoomDescription DB.=.) . Just
+                , Models.roomBgFileName room >>= Just . (Models.RoomBgFileName  DB.=.) . Just
                 ]
         pure . Right $ RoomUpdateValidated userClaims $ catMaybes transformedList
 
@@ -148,12 +115,7 @@ instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValida
         userClaims <- getUserClaims $ genericRoomRequestUnvalidatedToken roomUnvalidated
         let room = genericRoomRequestUnvalidatedRoom roomUnvalidated
         pure . Right $ GenericRoomRequestValidated
-                { genericRoomRequestValidatedRoom = Models.Room
-                    (unownedRoomTitle room)
-                    (unownedRoomDescription room)
-                    (unownedRoomBgFileName room)
-                    -- FIXME: RoomUUID can be renamed simply to ObjectUUID or something!
-                    (Models.AccountKey . Models.RoomUUID $ JWT.userId userClaims)
+                { genericRoomRequestValidatedRoom = room
                 , genericRoomRequestValidatedUserClaims = userClaims
                 }
 
