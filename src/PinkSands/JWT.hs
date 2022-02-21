@@ -8,6 +8,15 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE AllowAmbiguousTypes        #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module PinkSands.JWT where
 
@@ -32,6 +41,7 @@ import           Prelude                 hiding ( exp )
 import qualified Crypto.KDF.Argon2       as Argon2
 import Crypto.Error
 import qualified Data.ByteString as BS
+import qualified Data.Aeson as A
 
 
 type Token = ByteString
@@ -67,6 +77,7 @@ data UserClaims = UserClaims { userId :: UUID
                              , accounts :: NonEmpty UUID
                              }
   deriving stock (Eq, Show, Generic)
+  deriving (A.ToJSON)
 
 
 

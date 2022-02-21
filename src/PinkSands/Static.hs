@@ -21,6 +21,7 @@ import Text.Mustache (ToMustache (toMustache))
 import qualified Data.HashMap.Strict as HashMap
 --import Control.Monad (filterM)
 import qualified Data.Text as T
+import qualified PinkSands.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -46,9 +47,23 @@ copyPath :: FilePath
 copyPath = staticPath </> "copy"
 
 
+-- | Mustache templates are kept here. Base templates and includes and the like, not main content.
+mustacheTemplatesPath :: FilePath 
+mustacheTemplatesPath = staticPath </> "mustache"
+
+
+-- | Files in this directory get ran through the custom Mustache renderer and
+-- written to the `buildPath`.
+mustacheBuildThesePath :: FilePath 
+mustacheBuildThesePath = staticPath </> "mustache-build"
+
+
 -- | Mustache search space. Mustache will look for includes and templates in general here.
+--
+-- Something to beware of: I think the search path order means that whichever path has the
+-- file name first will result in not checking any of the other paths.
 searchSpace :: [FilePath]
-searchSpace = [staticPath </> "mustache"]
+searchSpace = [mustacheTemplatesPath, mustacheBuildThesePath]
 
 
 -- | Object for Mustache templates.
@@ -78,6 +93,31 @@ instance ToMustache RoomObject where
     flatCoords :: [(Int, Int)] -> String
     flatCoords coords = intercalate "," $ foldl (\acc (x,y) -> show x:show y:acc) [] coords
 
+
+-- | The goal is to make certain values from the config available as mustache template variables,
+-- by transforming the type into a list of substitutions.
+appEnvConfigToSubstitutions :: Conf.AppEnvConfig -> [(T.Text, M.Value)]
+appEnvConfigToSubstitutions appEnvConfig =
+  -- NOTE: I feel like this pattern of not making the keys in the substitution a M.String is rather weird... diverting
+  -- the type for later plumbing... FIXME
+  --
+  -- FIXME: type Substitutions = [(M.String, M.Value)]
+  -- Make sure above isn't already a part of the mustache framework in some way...
+  [(k, M.String v) | (k, lookupFunc) <- Conf.appEnvConfigWhitelist, (Just v) <- [lookupFunc appEnvConfig]]
+
+
+--parseMustacheChildWithConfigVars :: [FilePath] -> FilePath -> [(T.Text, Value)] -> ...
+parseMustacheChildWithConfigVars :: [FilePath] -> FilePath -> [(T.Text, M.Value)] -> IO T.Text
+parseMustacheChildWithConfigVars searchPath someFilePath substitutions =
+  Conf.getAppEnvConfig >>= parseMustacheChild searchPath someFilePath . (substitutions ++) . appEnvConfigToSubstitutions
+
+
+-- FIXME: this is similar to staticCopy! could abstract more. also this currently doesn't account for directoreis need to make. subdirs...
+mustacheBuildThese :: IO [FilePath]
+mustacheBuildThese = do
+  allFilesInBuildThesePath <- map (drop (length mustacheBuildThesePath + 1)) <$> getFilesRecursive mustacheBuildThesePath
+  -- FIXME: won't this not give the full path?
+  traverse mustacheBuild allFilesInBuildThesePath
 
 
 -- | Copy everything that must only be copied, not parsed in any way.
@@ -158,19 +198,30 @@ createNewRoom uuid room portals = do
     roomIndexFilePath = joinPath [roomDirectory, "index.html"]
     substitutions = [("room", toMustache roomObj)] -- FIXME: feels sloppy?
   -- the joinPath on this line is extremely misleading, need to fix this.
-  roomFileText <- parseMustacheChild searchSpace templateName substitutions
+  -- FIXME: should add config info from a config file for stuff like "site name", make a boilerplate function basically
+  roomFileText <- parseMustacheChildWithConfigVars searchSpace templateName substitutions
   _ <- createDirectoryIfMissing True roomDirectory
   _ <- writeFile roomIndexFilePath . unpack $ roomFileText
   pure relativeRoomDirectoryPath
 
 
+-- RETIRE THIS
 -- | Create the admin backend page.
 createAdminBackend :: IO FilePath
 createAdminBackend = do
   let adminFileName = "admin.html"
-  adminPageText <- parseMustacheChild searchSpace adminFileName []
+  adminPageText <- parseMustacheChildWithConfigVars searchSpace adminFileName []
   let outPath = buildPath </> adminFileName
   _ <- writeFile outPath $ unpack adminPageText
+  pure outPath
+
+
+-- | Build out a file in the Mustache search path out to the build path.
+mustacheBuild :: FilePath -> IO FilePath
+mustacheBuild  fileName = do
+  pageText <- parseMustacheChildWithConfigVars searchSpace fileName []
+  let outPath = buildPath </> fileName
+  _ <- writeFile outPath $ unpack pageText
   pure outPath
 
 
@@ -187,6 +238,7 @@ createAdminBackend = do
 setupEssentials :: IO [FilePath]
 setupEssentials = do
   --filePaths <- traverse copyStatic staticFilesToCopy
-  filePaths <- staticCopy
+  filePathsFromCopying <- staticCopy
+  filePathsFromBuilding <- mustacheBuildThese
   adminPath <- createAdminBackend
-  pure $ adminPath : filePaths
+  pure $ adminPath : filePathsFromCopying ++ filePathsFromBuilding

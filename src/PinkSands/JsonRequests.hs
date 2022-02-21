@@ -19,7 +19,8 @@ import Web.Scotty.Trans (ActionT, jsonData, status, json, finish)
 
 import qualified PinkSands.JWT as JWT (UserClaims(..), decodeAndValidateFull)
 import qualified PinkSands.Models as Models (Room(..), EntityField(..))
-import PinkSands.Middle (ConfigM, Error, ApiError(..))
+import PinkSands.Middle (Error, ApiError(..))
+import PinkSands.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import Network.HTTP.Types.Status (notFound404)
 import qualified Database.Persist as DB
@@ -65,12 +66,17 @@ instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated wher
         let
             room = genericRoomRequestUnvalidatedRoom roomUnvalidated
             -- FIXME: I feel like this should be possible with some more abstraction so
-            -- I don't need to be explicit here...
-            (transformedList :: [Maybe (Update Models.Room)]) =
-                [ Models.roomTitle room >>= Just . (Models.RoomTitle DB.=.) . Just
-                , Models.roomDescription room >>= Just . (Models.RoomDescription DB.=.) . Just
-                , Models.roomBgFileName room >>= Just . (Models.RoomBgFileName  DB.=.) . Just
+            -- I don't need to be explicit here... some kind of trick... maybe having to
+            -- do with Persistent directly... could be pairs
+            -- should be able to use a command to get both sides?
+            pairs =
+                [ (Models.roomTitle, Models.RoomTitle)
+                , (Models.roomDescription, Models.RoomDescription)
+                , (Models.roomBgFileName, Models.RoomBgFileName)
                 ]
+            (transformedList :: [Maybe (Update Models.Room)]) = map
+                (\(x,y) -> x room >>= Just . (y DB.=.) . Just)
+                pairs
         pure . Right $ RoomUpdateValidated userClaims $ catMaybes transformedList
 
 
@@ -104,10 +110,14 @@ getUserClaims :: Token -> ActionT Error ConfigM JWT.UserClaims
 getUserClaims token = getUserClaims' token >>= failLeft
 
 
+-- | For requests which only use a token object and nothing else.
+data TokenRequestUnvalidated = TokenRequestUnvalidated { tokenA :: Token } deriving (Generic, Aeson.FromJSON)
+
+
 -- | This is useful for actions which only need a token/to be authorized in 
 -- some way.
-instance ValidatedRequest Token JWT.UserClaims where
-    validateRequest = getUserClaims'
+instance ValidatedRequest TokenRequestUnvalidated JWT.UserClaims where
+    validateRequest (TokenRequestUnvalidated token) = getUserClaims' token
 
 
 instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValidated where
@@ -120,8 +130,8 @@ instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValida
                 }
 
 
+-- FIXME: doesn't this already exist in JWT? why do it twice?
 newtype Token = Token ByteString.ByteString deriving (Generic, Show)
-
 
 instance Aeson.FromJSON Token where
     parseJSON (Aeson.String v) = Token . TSE.encodeUtf8 <$> pure v

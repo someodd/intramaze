@@ -38,6 +38,10 @@ import Web.Scotty (Parsable)
 import Web.Scotty.Trans (Parsable(parseParam))
 --import GHC.Base (Eq)
 import Web.PathPieces (PathPiece(..))
+import Database.Persist (fieldHaskell)
+import Database.Persist (getEntityFields)
+import qualified Database.Persist as Database.Persist.Names
+import qualified Database.Persist as Database.Persist.Types.Base
 --import qualified Data.ByteString as BS
 
 -- FIXME: should use actual
@@ -126,6 +130,13 @@ instance PersistField RoomUUID where
       Just uuid -> Right . RoomUUID $ uuid
       Nothing -> Left . T.pack $ "Invalid UUID: " <> BSU.toString byteString
   fromPersistValue persistValue = Left . T.pack $ "Invalid UUID:" ++ show persistValue
+
+
+getEntityFieldsHaskell
+  :: Database.Persist.Types.Base.EntityDef
+  -> [Database.Persist.Names.FieldNameHS]
+getEntityFieldsHaskell someEntity = do
+  map fieldHaskell $ getEntityFields someEntity
 
 
 {-

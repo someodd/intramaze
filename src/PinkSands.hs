@@ -41,10 +41,13 @@ import PinkSands.ChatWebSocket (ServerState)
 import PinkSands.Middle
 import Data.Text.Encoding as TSE
 import qualified PinkSands.Actions as Actions
+import PinkSands.Config
+import PinkSands.Static (setupEssentials)
 
 
 main :: IO ()
 main = do
+  _ <- setupEssentials  -- FIXME: this should only be done with a flag.
   c <- getConfig
   migrateSchema c
   runApplication c
@@ -59,13 +62,16 @@ migrateSchema c = do
 getConfig :: IO Config
 getConfig = do
   e <- getEnvironment
+  aec <- getAppEnvConfig
   p <- getPool e
   return Config
     { environment = e
+    , appEnvConfig = aec
     , pool = p
     }
 
 
+-- FIXME: redundant considering `appEnvConfig`.
 getEnvironment :: IO Environment
 getEnvironment = do
   m <- lookupEnv "SCOTTY_ENV"
@@ -206,6 +212,7 @@ application c = do
   get "/portals" Actions.getPortalsA
 
   -- user authorization
+  get "/users/whoami" Actions.getWhoamiA 
   post "/users" Actions.postUserA
   post "/users/login" Actions.postUserLoginA
   -- FIXME: this is a test

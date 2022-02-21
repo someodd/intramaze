@@ -30,6 +30,7 @@ import qualified PinkSands.JWT as JWT (makeToken, UserClaims (userId))
 import Data.Text.Encoding as TSE
 import PinkSands.JWT (UserClaims (..))
 import qualified PinkSands.JsonRequests as JsonRequests
+import PinkSands.Config
 
 
 type Action = ActionT Error ConfigM ()
@@ -44,12 +45,20 @@ data UsernamePassword = UsernamePassword
 instance FromJSON UsernamePassword where
 
 
+-- | Gets the user's UUID.
+getWhoamiA :: Action
+getWhoamiA = do
+    (uc :: UserClaims) <- JsonRequests.apiErrorLeft 
+    json uc
+
+
 -- | Create a new user.
 postUserA :: Action
 postUserA = do
   (t :: UsernamePassword) <- jsonData -- need to get username and password from this
   _ <- runDB (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
   status created201
+  -- FIXME: should give back json of the uuid?
   json (1 :: Int)
 
 
@@ -189,6 +198,8 @@ postRoomsImageA = do
   -- we need to be the room author to do this. get room author and then check that
   -- author in token matches with jwtUserClaim check wahtever FIXME
   (i :: RoomUUID) <- param "id"
+  (userClaims :: UserClaims) <- JsonRequests.apiErrorLeft
+  _ <- mustBeRoomAuthorOrRoot i userClaims
   files' <- files
   let fileInfo = case files' of
                    ("image", fileInfo'):_ -> fileInfo'
@@ -350,7 +361,7 @@ jwtRequire token jwtSucceedCondition failString = do
 
 
 -- FIXME: belongs somewhere else
--- NOTE: I don't understand the fromIntegral/Integer bit of this function.
+-- NOTE: I don't understand the fromIntegral/Integer bit of this function. 
 -- Doesn't it already know it's an integer, since that's in the function's signature?
 toKey :: DB.ToBackendKey DB.SqlBackend a => Integer -> DB.Key a
 toKey i = DB.toSqlKey (fromIntegral (i :: Integer))

@@ -103,4 +103,5 @@ library
         PinkSands.Middle
         PinkSands.JsonRequests
         PinkSands.Actions
+        PinkSands.Config
         Template
