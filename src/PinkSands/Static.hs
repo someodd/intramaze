@@ -97,15 +97,16 @@ instance ToMustache RoomObject where
 -- | The goal is to make certain values from the config available as mustache template variables,
 -- by transforming the type into a list of substitutions.
 appEnvConfigToSubstitutions :: Conf.AppEnvConfig -> [(T.Text, M.Value)]
-appEnvConfigToSubstitutions appEnvConfig =
+appEnvConfigToSubstitutions appEnvConfig' =
   -- NOTE: I feel like this pattern of not making the keys in the substitution a M.String is rather weird... diverting
   -- the type for later plumbing... FIXME
   --
   -- FIXME: type Substitutions = [(M.String, M.Value)]
   -- Make sure above isn't already a part of the mustache framework in some way...
-  [(k, M.String v) | (k, lookupFunc) <- Conf.appEnvConfigWhitelist, (Just v) <- [lookupFunc appEnvConfig]]
+  [(k, M.String v) | (k, lookupFunc) <- Conf.appEnvConfigWhitelist, (Just v) <- [lookupFunc appEnvConfig']]
 
 
+-- FIXME: extremely related to above, just bundle together?!
 --parseMustacheChildWithConfigVars :: [FilePath] -> FilePath -> [(T.Text, Value)] -> ...
 parseMustacheChildWithConfigVars :: [FilePath] -> FilePath -> [(T.Text, M.Value)] -> IO T.Text
 parseMustacheChildWithConfigVars searchPath someFilePath substitutions =
@@ -113,6 +114,7 @@ parseMustacheChildWithConfigVars searchPath someFilePath substitutions =
 
 
 -- FIXME: this is similar to staticCopy! could abstract more. also this currently doesn't account for directoreis need to make. subdirs...
+-- | Use Mustache renderer to generate files found in a particular directory, out to the built directory.
 mustacheBuildThese :: IO [FilePath]
 mustacheBuildThese = do
   allFilesInBuildThesePath <- map (drop (length mustacheBuildThesePath + 1)) <$> getFilesRecursive mustacheBuildThesePath

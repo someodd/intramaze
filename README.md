@@ -7,15 +7,19 @@ I use Debian (unstable).
 Run the backend:
 
 ```shell
-env SCOTTY_ENV=Test cabal run
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=MazeQuest cabal run
 ```
 
-And serve the built static files directory (here's a way to test):
+The above will build the static files and run the REST API, which both manages the database and handles updating the static files.
+
+Serve the built static files directory (here's a way to test):
 
 ```
 cd built
 python3 -m http.server
 ```
+
+Now you can visit http://localhost:8000/.
 
 ## Setup/Dependencies
 
