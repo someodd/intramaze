@@ -1,18 +1,18 @@
 ---
 parent: base.html
-title: Account Login
+title: Register New Account
 ---
-<p>Log into your {{siteTitle}} account.</p>
+<p>Create a new {{siteTitle}} account.</p>
 
 <form id="login-form" action="javascript: void(0)">
     <label for="username">Username: </label>
     <input id="username" type="text" size="12" />
     <label for="password">Password: </label>
     <input id="password" type="text" size="12" />
-    <input id="login-submit" type="submit" value="Login" />
+    <input id="login-submit" type="submit" value="Register" />
 </form>
 
-<p>Don't have an account? <a href="/register.html">Register an account!</a></p>
+<p>Already have an account? <a href="/login.html">Log in to your account now.</a></p>
 
 
 <script src="/rest.js"></script>
@@ -21,9 +21,8 @@ title: Account Login
 <script defer>
     testAuth();
     document.getElementById('login-form').addEventListener('submit', function () {
-            console.log("okay!");
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
-            login(username, password);
+            register(username, password);
     });
 </script>

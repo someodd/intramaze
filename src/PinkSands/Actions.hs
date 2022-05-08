@@ -1,3 +1,4 @@
+-- TODO: all responses should include a response code, error type info, and then the actual response.
 -- | Actions (routes) for handling requests...
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -62,6 +63,7 @@ postUserA = do
   json (1 :: Int)
 
 
+-- FIXME: more elegant status on fail
 -- | Log in, creating/return a JWT, or an error.
 postUserLoginA :: Action
 postUserLoginA = do

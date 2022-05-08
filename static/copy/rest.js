@@ -104,6 +104,47 @@ async function getRoom (uuid) {
 
 
 /**
+ * Authentication request (JSON Web Token).
+ * 
+ * @param {String} username -  
+ * @param {String} password -  
+ * @returns On success returns the JSON web token. Otherwise an error message.
+ */
+async function authenticate(username, password) {
+    /** post a user login to /users/login, parse response */
+    const response = await restApiRequest('users/login', 'POST', {username: username, password: password})
+    console.log(response);
+    return response;
+}
+
+
+/**
+ * Register/create a user account.
+ * @param {String} username -
+ * @param {String} password -
+ * @returns 
+ */
+async function register(username, password) {
+    const response = await restApiRequest('users', 'POST', {username: username, password: password});
+    console.log(response);
+    return response;
+}
+
+
+/**
+ * Perform a JWT-authenticated request to the /user/whoami endpoint.
+ * 
+ * @param {String} jwt - JSON Web Token...
+ * @returns ...
+ */
+async function whoami(jwt) {
+    const response = await restApiRequest('users/whoami', 'GET', {tokenA: jwt});
+    console.log(response);
+    return response;
+}
+
+
+/**
  * Not necessarily a REST API thing, but it's here because it's shared... I should really move this somewhere else!
  * 
  * @param {String} val - Value to search for.
