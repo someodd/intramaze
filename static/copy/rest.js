@@ -17,15 +17,20 @@
  * Make a request to the REST API.
  * @param {String} endpoint - The endpoint to make a request to. See also `restApiHost`.
  * @param {String} method - The HTTP method to use during the request.
- * @param {Object} object - The object to use in the JSON body during the request.
+ * @param {Object} body - The object to use in the JSON body during the request.
+ * @param {Object} headers - HTTP headers as object.
  * @returns {Object} The JSON response.
  */
-async function restApiRequest(endpoint, method, object) {
-    // Generic request to the REST API.
-    const response = await fetch(restApiHost + endpoint, {
-      method: method,
-      body: (typeof object !== 'undefined') ? JSON.stringify(object) : null
-    });
+async function restApiRequest(endpoint, method, body, headers) {
+    var requestObject = {
+        method: method,
+        headers: Object.assign({'Content-Type': 'application/json'}, headers)
+    }
+    if (typeof body !== 'undefined' && body !== null) {
+        requestObject = Object.assign(requestObject, {body: JSON.stringify(body)});
+    }
+    console.log(requestObject);
+    const response = await fetch(restApiHost + endpoint, requestObject);
     const responseJSON = await response.json();
     return responseJSON;
   }
@@ -138,7 +143,7 @@ async function register(username, password) {
  * @returns ...
  */
 async function whoami(jwt) {
-    const response = await restApiRequest('users/whoami', 'GET', {tokenA: jwt});
+    const response = await restApiRequest('users/whoami', 'GET', null, {Authorization: jwt});
     console.log(response);
     return response;
 }

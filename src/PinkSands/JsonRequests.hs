@@ -1,3 +1,5 @@
+-- FIXME: maybe not just for JSON requests since validates headers too! maybe just call it
+-- "request validation."
 -- | Models for JSON requests. Defines the structure of the request and validation tools.
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -15,7 +17,8 @@ import qualified Data.Aeson as Aeson (FromJSON(..), Value (..))
 import GHC.Generics ( Generic )
 import qualified Data.Text.Encoding as TSE
 import qualified Data.ByteString as ByteString (ByteString)
-import Web.Scotty.Trans (ActionT, jsonData, status, json, finish)
+import Web.Scotty.Trans (ActionT, jsonData, status, json, finish, header)
+import qualified Data.Text.Lazy.Encoding as TLE ( encodeUtf8 )
 
 import qualified PinkSands.JWT as JWT (UserClaims(..), decodeAndValidateFull)
 import qualified PinkSands.Models as Models (Room(..), EntityField(..))
@@ -26,12 +29,13 @@ import Network.HTTP.Types.Status (notFound404)
 import qualified Database.Persist as DB
 import Database.Persist (Update)
 import Data.Maybe (catMaybes)
+import qualified Data.ByteString.Lazy as BL
+import PinkSands.JWT (UserClaims)
 
 
 -- | Many room requests (JSON) use this format.
 data GenericRoomRequestUnvalidated = GenericRoomRequestUnvalidated
     { genericRoomRequestUnvalidatedRoom :: Models.Room
-    , genericRoomRequestUnvalidatedToken :: Token
     } deriving (Generic, Show, Aeson.FromJSON)
 
 
@@ -51,6 +55,7 @@ class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
     -- but can be other errors).
     apiErrorLeft :: ActionT Error ConfigM b
     apiErrorLeft = do
+        -- FIXME: this will error if no JSON (why should it if the model is blank!? some requests don't require json)
         t <- jsonData
         maybeValidJson <- validateRequest t
         failLeft maybeValidJson
@@ -59,9 +64,10 @@ class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
 data RoomUpdateValidated = RoomUpdateValidated JWT.UserClaims [Update Models.Room] deriving (Generic)
 
 
+
 instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated where
     validateRequest roomUnvalidated = do
-        userClaims <- getUserClaims $ genericRoomRequestUnvalidatedToken roomUnvalidated
+        userClaims <- getUserClaimsOrFail
         -- needs to validate token too... needs to be same as author or root
         let
             room = genericRoomRequestUnvalidatedRoom roomUnvalidated
@@ -80,6 +86,23 @@ instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated wher
         pure . Right $ RoomUpdateValidated userClaims $ catMaybes transformedList
 
 
+-- FIXME: four functions that could be maybe combined?
+
+
+getUnvalidatedToken :: ActionT Error ConfigM (Either String Token)
+getUnvalidatedToken = do
+    token <- header "Authorization"
+    case token of
+      Nothing -> pure . Left $ "Missing authorization header."
+      Just txt -> pure $ Right . Token . BL.toStrict . TLE.encodeUtf8 $ txt
+
+
+-- | Read the JWT from the request, ensure that it's valid or produce an HTTP `Error`,
+-- otherwise return the `UserClaims` corresponding to the token found in the request.
+getUserClaimsOrFail :: ActionT Error ConfigM UserClaims
+getUserClaimsOrFail = getUnvalidatedToken >>= failLeft >>= getUserClaims
+
+
 getUserClaims' :: Token -> ActionT Error ConfigM (Either String JWT.UserClaims)
 getUserClaims' (Token token) = do
     unvalidatedToken <- liftIO $ JWT.decodeAndValidateFull $ pure token
@@ -87,6 +110,13 @@ getUserClaims' (Token token) = do
       Left errorString -> do
           pure . Left $ errorString
       Right uc -> pure . Right $ uc
+
+
+-- FIXME: this could be abstracted to Either so both the instance and
+-- this could use it... use either boilerplate
+-- FIXME: does this perhaps belong in JWT instead?
+getUserClaims :: Token -> ActionT Error ConfigM JWT.UserClaims
+getUserClaims token = getUserClaims' token >>= failLeft
 
 
 -- FIXME: i'd like to use Status as argument here. but maybe Left should be
@@ -103,26 +133,9 @@ failLeft something = do
             pure a
 
 
--- FIXME: this could be abstracted to Either so both the instance and
--- this could use it... use either boilerplate
--- FIXME: does this perhaps belong in JWT instead?
-getUserClaims :: Token -> ActionT Error ConfigM JWT.UserClaims
-getUserClaims token = getUserClaims' token >>= failLeft
-
-
--- | For requests which only use a token object and nothing else.
-data TokenRequestUnvalidated = TokenRequestUnvalidated { tokenA :: Token } deriving (Generic, Aeson.FromJSON)
-
-
--- | This is useful for actions which only need a token/to be authorized in 
--- some way.
-instance ValidatedRequest TokenRequestUnvalidated JWT.UserClaims where
-    validateRequest (TokenRequestUnvalidated token) = getUserClaims' token
-
-
 instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValidated where
     validateRequest roomUnvalidated = do
-        userClaims <- getUserClaims $ genericRoomRequestUnvalidatedToken roomUnvalidated
+        userClaims <- getUserClaimsOrFail
         let room = genericRoomRequestUnvalidatedRoom roomUnvalidated
         pure . Right $ GenericRoomRequestValidated
                 { genericRoomRequestValidatedRoom = room

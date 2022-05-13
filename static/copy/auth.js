@@ -20,7 +20,7 @@ async function login(username, password) {
 }
 
 async function testAuth() {
-    document.write(await whoami(getJwtCookie()));
+    console.log(await whoami(getJwtCookie()));
 }
 
 /**
@@ -28,12 +28,18 @@ async function testAuth() {
  * @returns {String|null} - Null if no "token" found.
  */
 function getJwtCookie() {
+    console.log("looking for cookie")
+    console.log(document.cookie)
     const cookiePairs = document.cookie.split(';');
     for (const cookiePair of cookiePairs) {
         const [key, ...value] = cookiePair.split('=');
-        if (key === "token") {
+        console.log(key.trim())
+        if (key.trim() === "token") {
+            console.log("found token");
+            console.log(value);
             return value;
         }
     }
+    console.log("never found cookie")
     return null;
 }

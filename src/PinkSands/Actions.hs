@@ -49,7 +49,7 @@ instance FromJSON UsernamePassword where
 -- | Gets the user's UUID.
 getWhoamiA :: Action
 getWhoamiA = do
-    (uc :: UserClaims) <- JsonRequests.apiErrorLeft 
+    (uc :: UserClaims) <- JsonRequests.getUserClaimsOrFail 
     json uc
 
 
@@ -178,7 +178,7 @@ getGenerateEverythingA = do
     (roomKeySelection :: [DB.Key Room]) <- runDB (DB.selectKeysList [] [])
     -- couldn't this be more elegant? the userclaims stuff? could even make a subclass
     -- which requires using a validatable request type
-    (userClaims :: UserClaims) <- JsonRequests.apiErrorLeft
+    (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
     if isRoot userClaims
         then do
             paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
@@ -200,7 +200,7 @@ postRoomsImageA = do
   -- we need to be the room author to do this. get room author and then check that
   -- author in token matches with jwtUserClaim check wahtever FIXME
   (i :: RoomUUID) <- param "id"
-  (userClaims :: UserClaims) <- JsonRequests.apiErrorLeft
+  (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   _ <- mustBeRoomAuthorOrRoot i userClaims
   files' <- files
   let fileInfo = case files' of
@@ -285,7 +285,7 @@ putRoomA = do
 deleteRoomA :: Action
 deleteRoomA = do
   (i :: RoomUUID) <- param "id"
-  (userClaims :: UserClaims) <- JsonRequests.apiErrorLeft
+  (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   _ <- mustBeRoomAuthorOrRoot i userClaims
 
   -- we have the right permissions to delete the room, so we can now delete it.

@@ -189,7 +189,7 @@ application c = do
   let e = environment c
   middleware (loggingM e)
   -- FIXME: this doesn't belong here and shouldn't always be enabled. delete this! only should be enabled on develop mode
-  middleware $ cors (const . Just $ simpleCorsResourcePolicy {corsMethods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]})
+  middleware $ cors (const . Just $ simpleCorsResourcePolicy {corsMethods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"], corsRequestHeaders=["Authorization", "Content-Type"]})
   defaultHandler (defaultH e)
   -- Rooms
   -- TODO: patch room? or will i always be doing put...
