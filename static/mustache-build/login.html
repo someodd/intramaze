@@ -4,26 +4,55 @@ title: Account Login
 ---
 <p>Log into your {{siteTitle}} account.</p>
 
-<form id="login-form" action="javascript: void(0)">
-    <label for="username">Username: </label>
-    <input id="username" type="text" size="12" />
-    <label for="password">Password: </label>
-    <input id="password" type="text" size="12" />
-    <input id="login-submit" type="submit" value="Login" />
-</form>
 
-<p>Don't have an account? <a href="/register.html">Register an account!</a></p>
+<div id="not-logged-in">
+    <form id="login-form" action="javascript: void(0)">
+        <label for="username">Username: </label>
+        <input id="username" type="text" size="12" />
+        <label for="password">Password: </label>
+        <input id="password" type="text" size="12" />
+        <input id="login-submit" type="submit" value="Login" />
+    </form>
 
+    <p>Don't have an account? <a href="/register.html">Register an account!</a></p>
+</div>
+
+<div id="logged-in">
+    <p>Hello, <a href="/user/usernamehere.html" class="username-link">someuser</a>, you are already logged in.</p>
+    <p>Perhaps you meant to <a href="/logout.html">logout</a>?</p>
+</div>
 
 <script src="/rest.js"></script>
 <script src="/auth.js"></script>
 
-<script defer>
+<script defer async>
+
+    toggleLoginContent()
     testAuth();
     document.getElementById('login-form').addEventListener('submit', function () {
-            console.log("okay!");
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
             login(username, password);
     });
+
+    /**
+     * Change what is displayed on the login page depending on if the user is
+     * already logged in (or not).
+     */
+    async function toggleLoginContent() {
+        const loggedUser = await getUser();
+        if (loggedUser) {
+            document.getElementById('not-logged-in').style.display = "none";
+            document.getElementById('logged-in').style.display = "block";
+
+            var myClasses = document.getElementsByClassName("username-link");
+            for (const someClass of myClasses) {
+                someClass.innerHTML = loggedUser.userName;
+                someClass.href = "/users/" + loggedUser.userName + ".html"
+            }
+        } else {
+            document.getElementById('not-logged-in').style.display = "block";
+            document.getElementById('logged-in').style.display = "none"; 
+        }
+    }
 </script>

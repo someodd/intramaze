@@ -25,7 +25,7 @@ import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
 import PinkSands.Static (createRoomImage, createNewRoom, setupEssentials)
 import Database.Persist (Entity (entityVal), Filter (Filter), FilterValue (..))
-import PinkSands.Middle
+import qualified PinkSands.Middle as Middle
 import qualified Data.Text.Lazy as TL
 import qualified PinkSands.JWT as JWT (makeToken, UserClaims (userId))
 import Data.Text.Encoding as TSE
@@ -34,7 +34,7 @@ import qualified PinkSands.JsonRequests as JsonRequests
 import PinkSands.Config
 
 
-type Action = ActionT Error ConfigM ()
+type Action = ActionT Middle.Error ConfigM ()
 
 
 -- belongs in json requests FIXME?
@@ -57,7 +57,7 @@ getWhoamiA = do
 postUserA :: Action
 postUserA = do
   (t :: UsernamePassword) <- jsonData -- need to get username and password from this
-  _ <- runDB (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
+  _ <- Middle.runDB (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
   status created201
   -- FIXME: should give back json of the uuid?
   json (1 :: Int)
@@ -68,7 +68,7 @@ postUserA = do
 postUserLoginA :: Action
 postUserLoginA = do
   (t :: UsernamePassword) <- jsonData -- need to get username and password from this
-  (userIds :: [AccountId]) <- runDB (DB.rawSql "SELECT id FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
+  (userIds :: [AccountId]) <- Middle.runDB (DB.rawSql "SELECT id FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
   case userIds of
     (userId' :: AccountId):_ -> do
       status created201
@@ -93,7 +93,7 @@ postTestRequire = do
 
 getRoomsA :: Action
 getRoomsA = do
-  ts <- runDB (DB.selectList [] [])
+  ts <- Middle.runDB (DB.selectList [] [])
   json (ts :: [DB.Entity Room])
 
 
@@ -109,7 +109,7 @@ postRoomsA = do
   let room = JsonRequests.genericRoomRequestValidatedRoom createRoomValidated
   -- could use insert instead of insert_ to get the key back and we can give the key as a response or add it to
   -- jsonData?
-  (RoomKey uuid) <- runDB (DB.insert room)
+  (RoomKey uuid) <- Middle.runDB (DB.insert room)
   -- FIXME: should we be pointing the database to this? it'd make sense.
   filePath <- liftIO $ createNewRoom uuid room []
   status created201
@@ -129,8 +129,8 @@ generateRoom
   => RoomUUID
   -> t ConfigM (Maybe FilePath)
 generateRoom uuid = do
-  roomMaybe <- runDB $ DB.get (RoomKey uuid)
-  portals <- runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
+  roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
+  portals <- Middle.runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
   case roomMaybe >>= \room -> Just $ createNewRoom uuid room [entityVal portal | portal <- portals] of
     Nothing -> pure Nothing
     Just roomPath -> do
@@ -153,17 +153,17 @@ getRoomGenerateA = do
       json path
 
 
--- FIXME: this doesn't belong here!
-getRoomAuthor :: RoomUUID -> ActionT Error ConfigM (Either String AccountId)
+-- FIXME: should produce error if no room author
+getRoomAuthor :: RoomUUID -> ActionT Middle.Error ConfigM (Either Middle.ApiError AccountId)
 getRoomAuthor roomUuid = do
-  m <- runDB (DB.get (RoomKey roomUuid))
+  m <- Middle.runDB (DB.get (RoomKey roomUuid))
   case m of
-    Nothing -> pure $ Left "not found"
+    Nothing -> pure . Left $ Middle.ApiError 404 "not found"
     Just t -> pure $ Right $ roomAuthor (t :: Room)
 
 
 -- | Error out if no room...
-getRoomAuthor' :: RoomUUID -> ActionT Error ConfigM AccountId
+getRoomAuthor' :: RoomUUID -> ActionT Middle.Error ConfigM AccountId
 getRoomAuthor' roomUuid = getRoomAuthor roomUuid >>= JsonRequests.failLeft
 
 
@@ -175,7 +175,7 @@ getRoomAuthor' roomUuid = getRoomAuthor roomUuid >>= JsonRequests.failLeft
 -- Also setup essential files.
 getGenerateEverythingA :: Action
 getGenerateEverythingA = do
-    (roomKeySelection :: [DB.Key Room]) <- runDB (DB.selectKeysList [] [])
+    (roomKeySelection :: [DB.Key Room]) <- Middle.runDB (DB.selectKeysList [] [])
     -- couldn't this be more elegant? the userclaims stuff? could even make a subclass
     -- which requires using a validatable request type
     (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
@@ -186,8 +186,7 @@ getGenerateEverythingA = do
             status created201
             json $ [p | Just p <- paths] ++ builtStaticPaths
         else do
-          json . ApiError $ "You need to be root to generate all the static files."
-          finish
+          Middle.jsonError $ Middle.ApiError 403 "You need to be root to generate all the static files."
 
 
 -- FIXME: needs to use directory for room ID...
@@ -207,7 +206,7 @@ postRoomsImageA = do
                    ("image", fileInfo'):_ -> fileInfo'
                    _ -> error "nothing"
       imageFileName = fileName fileInfo
-  runDB (DB.update (RoomKey i) [RoomBgFileName DB.=. Just (decodeUtf8 imageFileName)])
+  Middle.runDB (DB.update (RoomKey i) [RoomBgFileName DB.=. Just (decodeUtf8 imageFileName)])
   pathToImage <- liftIO $ createRoomImage i (fileContent fileInfo) (toString imageFileName)
   status created201
   json pathToImage
@@ -219,7 +218,7 @@ getRoomA = do
   i <- param "id"
   --m <- runDB (DB.getBy (UniqueRoomID i))
   --m <- runDB (DB.get (toKey i))
-  m <- runDB (DB.get (RoomKey i))
+  m <- Middle.runDB (DB.get (RoomKey i))
   case m of
     Nothing -> notFoundA
     Just t -> json (t :: Room)
@@ -232,13 +231,13 @@ getRoomSearchA = do
   (description :: T.Text) <- param "description"
   --m <- runDB (DB.selectList [(RoomDescription) DB.==. (RoomKey i)] [])
   -- FIXME: this string substitution is VERY BAD. i also thing there's  abetter way to do this in 0.6.
-  m <- runDB $ DB.selectList [Filter RoomDescription (FilterValue . Just $ "%" <> description <> "%") (DB.BackendSpecificFilter "ILIKE")] []
+  m <- Middle.runDB $ DB.selectList [Filter RoomDescription (FilterValue . Just $ "%" <> description <> "%") (DB.BackendSpecificFilter "ILIKE")] []
   json (m :: [DB.Entity Room])
 
 
-mustBeRoomAuthorOrRoot :: RoomUUID -> UserClaims -> ActionT Error ConfigM Room
+mustBeRoomAuthorOrRoot :: RoomUUID -> UserClaims -> ActionT Middle.Error ConfigM Room
 mustBeRoomAuthorOrRoot roomUuid userClaims = do
-    m <- runDB $ DB.get (RoomKey roomUuid)
+    m <- Middle.runDB $ DB.get (RoomKey roomUuid)
     case m of
       Nothing -> do
           status status404
@@ -248,16 +247,15 @@ mustBeRoomAuthorOrRoot roomUuid userClaims = do
           if roomAuthor room == (AccountKey . RoomUUID $ userId userClaims) || isRoot userClaims
               then pure room
               else do
-                  -- FIXME: bad status
                   status status403
-                  json . ApiError $ "Must be author or root to perform this action."
+                  json $ Middle.ApiError 403 "Must be author or root to perform this action."
                   finish
 
 
 -- FIXME: belongs in JsonRequests
 -- | Handles getting a room  (from request) if we are the author (or root) according to the generic
 -- room request, or an error is provided.
-mustBeRoomAuthorOrRoot' :: ActionT Error ConfigM (RoomUUID, Room)
+mustBeRoomAuthorOrRoot' :: ActionT Middle.Error ConfigM (RoomUUID, Room)
 mustBeRoomAuthorOrRoot' = do
     i <- param "id"
     (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
@@ -277,7 +275,7 @@ putRoomA = do
     (i, roomFromRequest) <- mustBeRoomAuthorOrRoot'
 
     -- We now know we are either root or the room's author. proceed to modify.
-    runDB (DB.repsert (RoomKey i) roomFromRequest)
+    Middle.runDB (DB.repsert (RoomKey i) roomFromRequest)
     json roomFromRequest -- would it be better to have success message?
 
 
@@ -289,8 +287,8 @@ deleteRoomA = do
   _ <- mustBeRoomAuthorOrRoot i userClaims
 
   -- we have the right permissions to delete the room, so we can now delete it.
-  runDB (DB.delete (RoomKey i))
-  runDB (DB.deleteWhere [PortalBelongsTo DB.==. RoomKey i])
+  Middle.runDB (DB.delete (RoomKey i))
+  Middle.runDB (DB.deleteWhere [PortalBelongsTo DB.==. RoomKey i])
   json Null
 
 
@@ -300,7 +298,7 @@ getRoomsPortalsA = do
   (i :: RoomUUID) <- param "id"
   --m <- runDB (DB.getBy (UniqueRoomID i))
   --m <- runDB (DB.get (toKey i))
-  m <- runDB (DB.selectList [PortalBelongsTo DB.==. RoomKey i] [])
+  m <- Middle.runDB (DB.selectList [PortalBelongsTo DB.==. RoomKey i] [])
   json (m :: [DB.Entity Portal])
 
 
@@ -308,7 +306,7 @@ getRoomsPortalsA = do
 deletePortalsA :: Action
 deletePortalsA = do
   i <- param "id"
-  runDB (DB.delete (toKey i :: PortalId))
+  Middle.runDB (DB.delete (toKey i :: PortalId))
   status status204
   json Null
 
@@ -319,7 +317,7 @@ postPortalsA = do
   t <- jsonData
   -- could use insert instead of insert_ to get the key back and we can give the key as a response or add it to
   -- jsonData?
-  runDB (DB.insert_ t)
+  Middle.runDB (DB.insert_ t)
   status created201
   json (t :: Portal)
 
@@ -332,7 +330,7 @@ notFoundA = do
 
 getPortalsA :: Action
 getPortalsA = do
-  ts <- runDB (DB.selectList [] [])
+  ts <- Middle.runDB (DB.selectList [] [])
   json (ts :: [DB.Entity Portal])
 
 
@@ -348,13 +346,13 @@ patchRoomA = do
     _ <- mustBeRoomAuthorOrRoot i userClaims
 
     -- now we can start manipulation
-    runDB (DB.update (RoomKey i) $ roomUpdates)
+    Middle.runDB (DB.update (RoomKey i) $ roomUpdates)
     json Null
 
 
 -- FIXME: does this belong in jsonrequests or jwt?
 -- | Require some boolean property of the UserClaims.
-jwtRequire :: JsonRequests.Token  -> (UserClaims -> Bool) -> String -> ActionT Error ConfigM (Either String UserClaims)
+jwtRequire :: JsonRequests.Token  -> (UserClaims -> Bool) -> String -> ActionT Middle.Error ConfigM (Either String UserClaims)
 jwtRequire token jwtSucceedCondition failString = do
   userClaims <- JsonRequests.getUserClaims token
   if jwtSucceedCondition userClaims

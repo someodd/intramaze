@@ -18,11 +18,14 @@ title: Register New Account
 <script src="/rest.js"></script>
 <script src="/auth.js"></script>
 
-<script defer>
+<script defer async>
+
     testAuth();
     document.getElementById('login-form').addEventListener('submit', function () {
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
             register(username, password);
     });
+
+
 </script>

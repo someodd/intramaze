@@ -38,7 +38,7 @@ import qualified Network.Wai.Handler.WebSockets as WaiWs
 import Control.Monad (when)
 import Network.WebSockets.Connection (pingThread)
 import PinkSands.ChatWebSocket (ServerState)
-import PinkSands.Middle
+import qualified PinkSands.Middle as Middle
 import Data.Text.Encoding as TSE
 import qualified PinkSands.Actions as Actions
 import PinkSands.Config
@@ -184,7 +184,7 @@ getPort' = do
   return p
 
 
-application :: Config -> ScottyT Error ConfigM ()
+application :: Config -> ScottyT Middle.Error ConfigM ()
 application c = do
   let e = environment c
   middleware (loggingM e)
@@ -229,7 +229,7 @@ loggingM Test = id
 
 
 -- | Something something!
-defaultH :: Environment -> Error -> Actions.Action
+defaultH :: Environment -> Middle.Error -> Actions.Action
 defaultH e x = do
   status internalServerError500
   let o = case e of

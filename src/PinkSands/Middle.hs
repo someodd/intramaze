@@ -12,16 +12,32 @@ import qualified Data.Text.Lazy as TL (Text)
 import qualified Database.Persist.Postgresql as DB
 import Data.Aeson (ToJSON)
 import GHC.Generics (Generic)
+import Web.Scotty.Trans (ActionT, finish, json)
+import qualified Web.Scotty.Trans as Scotty (status)
 
 import PinkSands.Config
 
 
-data ApiError = ApiError { errorMessage :: String } deriving (Generic, Show)
+data ApiError = ApiError
+  { status :: Int
+  -- ^ The HTTP status code representing the error.
+  , error :: String
+  -- ^ Details about the error.
+  }
+  deriving (Generic, Show)
 instance ToJSON ApiError where
 
 
--- FIXME: move environment and config to config module!
+-- | API Error resulting in an error code and a JSON error message being sent and the
+-- action being finished.
+jsonError :: ApiError -> ActionT Error ConfigM a
+jsonError apiError@(ApiError httpCode _) = do
+  Scotty.status . toEnum $ httpCode
+  json apiError
+  finish
 
+
+-- FIXME: move environment and config to config module!
 
 
 -- some kind of monad transformer? NOTE figure out
