@@ -16,14 +16,14 @@ import qualified Data.Text as T
 import Data.Text.Lazy (Text)
 import qualified Database.Persist as DB
 import qualified Database.Persist.Postgresql as DB
-import PinkSands.Models (AccountId, Room (..), Key(..), Portal, RoomUUID (..), EntityField(..), PortalId)
+import PinkSands.Models (AccountId, Room (..), Key(..), Portal, RoomUUID (..), EntityField(..), PortalId, Account (..))
 import qualified Data.UUID as UUID
 import Network.HTTP.Types.Status (created201,
     notFound404, status204, status404, status403)
 import Network.Wai.Parse (FileInfo(..))
 import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
-import PinkSands.Static (createRoomImage, createNewRoom, setupEssentials)
+import PinkSands.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
 import Database.Persist (Entity (entityVal), Filter (Filter), FilterValue (..))
 import qualified PinkSands.Middle as Middle
 import qualified Data.Text.Lazy as TL
@@ -63,19 +63,19 @@ postUserA = do
   json (1 :: Int)
 
 
--- FIXME: more elegant status on fail
+-- FIXME: more elegant status on fail. use ApiError or that higher level one...
 -- | Log in, creating/return a JWT, or an error.
 postUserLoginA :: Action
 postUserLoginA = do
   (t :: UsernamePassword) <- jsonData -- need to get username and password from this
-  (userIds :: [AccountId]) <- Middle.runDB (DB.rawSql "SELECT id FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
-  case userIds of
-    (userId' :: AccountId):_ -> do
+  (accountEntities :: [DB.Entity Account]) <- Middle.runDB (DB.rawSql "SELECT ?? FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
+  case accountEntities of
+    (DB.Entity accountId account):_ -> do
       status created201
       --json $ makeToken $ (username t) (show . head $ userIds)
-      case UUID.fromString . show $ unAccountKey userId' of
+      case UUID.fromString . show $ unAccountKey accountId of
         (Just userUuid :: Maybe UUID.UUID) -> do
-          token <- liftIO $ JWT.makeToken userUuid (TL.toStrict $ username t)
+          token <- liftIO $ JWT.makeToken userUuid (TL.toStrict $ username t) (accountRoot account) -- FIXME XXX
           json $ TSE.decodeUtf8 token
         Nothing -> json ("failed to parse UUID from DB to a UUID type during JWT process" :: Text)
     [] -> do
@@ -179,14 +179,31 @@ getGenerateEverythingA = do
     -- couldn't this be more elegant? the userclaims stuff? could even make a subclass
     -- which requires using a validatable request type
     (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
-    if isRoot userClaims
-        then do
-            paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
-            builtStaticPaths <- liftIO setupEssentials
-            status created201
-            json $ [p | Just p <- paths] ++ builtStaticPaths
-        else do
-          Middle.jsonError $ Middle.ApiError 403 "You need to be root to generate all the static files."
+    needRoot userClaims "You need to be root to generate all the static files." $ do
+      -- FIXME/TODO: make a static generateEverything helper function
+      profilePaths <- buildProfilePages
+      paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
+      builtStaticPaths <- liftIO setupEssentials
+      status created201
+      json $ [p | Just p <- paths] ++ builtStaticPaths ++ profilePaths
+
+
+-- | Perform an `Action` if the `UserClaims` have the `root` property.
+needRoot :: UserClaims -> String -> Action -> Action
+needRoot userClaims errorMessage action = do
+  if isRoot userClaims
+    then action
+    else Middle.jsonError $ Middle.ApiError 403 errorMessage
+
+
+-- | Generate all the static profile pages for each user.
+getGenerateProfiles :: Action
+getGenerateProfiles = do
+  (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
+  needRoot userClaims "You need to be root to create all the profile page static files." $ do
+      pathsOfProfilePages <- buildProfilePages
+      status created201
+      json pathsOfProfilePages
 
 
 -- FIXME: needs to use directory for room ID...

@@ -212,6 +212,7 @@ application c = do
   get "/portals" Actions.getPortalsA
 
   -- user authorization
+  get "/users/generate" Actions.getGenerateProfiles
   get "/users/whoami" Actions.getWhoamiA 
   post "/users" Actions.postUserA
   post "/users/login" Actions.postUserLoginA

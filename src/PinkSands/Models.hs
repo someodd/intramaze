@@ -158,6 +158,7 @@ Account json
   Id RoomUUID default=gen_random_uuid()
   username Text
   password Text
+  root Bool default=False
   UniqueUsername username
 
 Portal json

@@ -115,8 +115,8 @@ Success (MkValid {getValid = Jwt {header = Header {alg = HS512 (MkSecret {reveal
 
 
 
-makeToken :: UUID -> Text -> IO ByteString -- or any other MonadTime instance
-makeToken userId username = getToken . sign hmac512 <$> mkPayload'' userId username
+makeToken :: UUID -> Text -> Bool -> IO ByteString -- or any other MonadTime instance
+makeToken userId username rootStatus = getToken . sign hmac512 <$> mkPayload'' userId username rootStatus
 {-
 λ> token
 "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50cyI6WyIwYmRmOTFjYy00OGJiLTQ3ZjUtYjYzMy05MjBjMzRiZDIzNTIiXSwiYXVkIjpbImh0dHBzOi8vbXlBcHAuY29tIl0sImNyZWF0ZWRBdCI6IjIwMjAtMDctMzFUMTE6NDU6MDBaIiwiZXhwIjoxNTk5NDk5MDczLCJpYXQiOjE1OTk0OTg3NzMsImlzUm9vdCI6ZmFsc2UsImlzcyI6Im15QXBwIiwidXNlcklkIjoiNWE3YzVjZGQtMzkwOS00NTZiLTlkZDItNmJhODRiZmVlYjI1IiwidXNlck5hbWUiOiJKb2huRG9lIn0.KH4YSODoTxuNLPYCyz0lmoVDHYJpvL8k6fccFugqs-6VcpctXeR4OYyWOZJDi294r6njCqRP15eqYpwrrzKKrQ" 
@@ -138,15 +138,18 @@ mkPayload''
   :: MonadTime m
   => UUID
   -> Text
+  -> Bool
+  -- FIXME: nonempty
   -> m (Payload '[ 'Grant "userId" UUID, 'Grant "userName" Text,
                    'Grant "isRoot" Bool, 'Grant "createdAt" UTCTime,
                    "accounts" ->> NonEmpty UUID]
         'NoNs)
-mkPayload'' userId username = jwtPayload
+mkPayload'' userId username rootStatus = jwtPayload
+  -- FIXME: use envvar for recipient and config in general and also issuer name.
   (withIssuer "myApp" <> withRecipient "https://myApp.com" <> setTtl 300)
   UserClaims { userId    = userId
              , userName  = username
-             , isRoot    = False
-             , createdAt = read "2020-07-31 11:45:00 UTC"
-             , accounts  = read "0bdf91cc-48bb-47f5-b633-920c34bd2352" :| []
+             , isRoot    = rootStatus
+             , createdAt = read "2020-07-31 11:45:00 UTC" -- FIXME
+             , accounts  = read "0bdf91cc-48bb-47f5-b633-920c34bd2352" :| [] -- FIXME
              }

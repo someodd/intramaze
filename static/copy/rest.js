@@ -49,6 +49,16 @@ async function updateDescription(uuid) {
 }
 
 
+// FIXME/TODO
+/**
+ * Regenerate all profiles. Requires root...
+ * @param {} uuid 
+ */
+async function regenerateAllProfiles() {
+
+}
+
+
 /**
  * Update a room's title.
  * @param {String} uuid - ID of the room to update the title of.

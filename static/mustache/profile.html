@@ -1,0 +1,12 @@
+---
+parent: base.html
+title: "{{username}}"
+---
+
+<p>{{username}} located at {{usernameSlug}}.</p>
+
+Here are the rooms they've made:
+
+<ul>
+    {{#rooms}}<li>{{.}}</li>{{/rooms}}
+</ul>

@@ -4,14 +4,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
-module PinkSands.Static (createRoomImage, createNewRoom, setupEssentials) where
+module PinkSands.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages) where
 
 import qualified Data.Vector as Vector (fromList)
 import Data.List (intercalate)
 import Data.HashMap.Strict ( fromList )
 import Data.Text (unpack, pack)
 import qualified Text.Mustache.Types as M (Value(..))
-import PinkSands.Models (RoomUUID, Room(..), Portal(..), Key (RoomKey), Polygon (Polygon))
+import PinkSands.Models (RoomUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
 import qualified Data.ByteString.Lazy as BSL (writeFile, ByteString)
 import System.FilePath (joinPath, (</>), takeDirectory)
 import System.Directory (createDirectoryIfMissing, copyFile, doesDirectoryExist)
@@ -22,6 +22,19 @@ import qualified Data.HashMap.Strict as HashMap
 --import Control.Monad (filterM)
 import qualified Data.Text as T
 import qualified PinkSands.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
+import qualified Text.Mustache.Types as MTypes
+import qualified PinkSands.Middle as Middle
+import qualified Database.Persist.Sql as DB
+import Web.Scotty.Trans (ActionT)
+import PinkSands.Config (ConfigM)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans (MonadTrans)
+import Control.Monad.IO.Class (MonadIO)
+import qualified Data.UUID as UUID
+import Database.Persist (keyToValues, LiteralType (Escaped))
+import Database.Persist.PersistValue (PersistValue(..))
+import Data.Maybe (fromJust)
+import qualified Data.ByteString.UTF8 as BSU
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -48,13 +61,13 @@ copyPath = staticPath </> "copy"
 
 
 -- | Mustache templates are kept here. Base templates and includes and the like, not main content.
-mustacheTemplatesPath :: FilePath 
+mustacheTemplatesPath :: FilePath
 mustacheTemplatesPath = staticPath </> "mustache"
 
 
 -- | Files in this directory get ran through the custom Mustache renderer and
 -- written to the `buildPath`.
-mustacheBuildThesePath :: FilePath 
+mustacheBuildThesePath :: FilePath
 mustacheBuildThesePath = staticPath </> "mustache-build"
 
 
@@ -70,8 +83,8 @@ searchSpace = [mustacheTemplatesPath, mustacheBuildThesePath]
 data RoomObject = RoomObject
   { roomObjId :: RoomUUID
   , roomObjPortals :: [Portal]
-  , roomObjTitle :: Maybe T.Text 
-  , roomObjDescription :: Maybe T.Text 
+  , roomObjTitle :: Maybe T.Text
+  , roomObjDescription :: Maybe T.Text
   , roomObjImagePath :: Maybe T.Text
   }
 
@@ -94,6 +107,7 @@ instance ToMustache RoomObject where
     flatCoords coords = intercalate "," $ foldl (\acc (x,y) -> show x:show y:acc) [] coords
 
 
+-- FIXME: better more accurate docs.
 -- | The goal is to make certain values from the config available as mustache template variables,
 -- by transforming the type into a list of substitutions.
 appEnvConfigToSubstitutions :: Conf.AppEnvConfig -> [(T.Text, M.Value)]
@@ -189,8 +203,8 @@ createNewRoom uuid room portals = do
     roomObj = RoomObject
       { roomObjId = uuid
       , roomObjPortals = portals
-      , roomObjTitle = roomTitle room 
-      , roomObjDescription = roomDescription room 
+      , roomObjTitle = roomTitle room
+      , roomObjDescription = roomDescription room
       , roomObjImagePath = roomBgFileName room
       }
     roomUuid = show uuid
@@ -225,6 +239,71 @@ mustacheBuild  fileName = do
   let outPath = buildPath </> fileName
   _ <- writeFile outPath $ unpack pageText
   pure outPath
+
+
+-- FIXME: this is SO messy!
+-- FIXME: this is weird because it's the only one that hits the database...
+-- refactor? should it not even get usernames? The output type is weird.
+-- | Build author profile pages.
+buildProfilePages :: ActionT Middle.Error ConfigM [FilePath]
+buildProfilePages = do
+  _ <- liftIO $ createDirectoryIfMissing True usersDirectory
+  usernameSlugPairs <- getUsernameSlugPairs
+  (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse generateProfile usernameSlugPairs
+  pure generatedProfilePaths
+ where
+  getUserRooms :: (MonadTrans t, MonadIO (t ConfigM))
+    => RoomUUID
+    -> t ConfigM [T.Text]
+  getUserRooms userId = do
+    (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
+    case rooms of
+      [] -> pure []
+      ens -> do
+        -- FIXME: head is bad!
+        let roomIds = fmap (\(DB.Entity accountId _) -> head $ keyToValues accountId) ens
+            roomUuids = fmap (\(PersistText id') -> id') roomIds
+        pure roomUuids
+
+  getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(T.Text, T.Text, [T.Text])]
+  getUsernameSlugPairs = do
+    -- FIXME/NOTE: how to only select username?
+    (accounts :: [DB.Entity Account]) <- Middle.runDB (DB.selectList [] [])
+    -- FIXME: redundant
+    case accounts of
+      (_ :: DB.Entity Account):_ -> do
+        traverse createTriplet accounts
+      [] -> pure []
+
+  -- TODO/FIXME: last value needs to be a RoomUUID
+  createTriplet :: DB.Entity Account -> ActionT Middle.Error ConfigM (T.Text, T.Text, [T.Text])
+  createTriplet accountEntity = do
+    -- FIXME/NOTE: I hate this. This is so ugly. Is this really the best Persist can do for giving me
+    -- the value of the id pertaining to the database entity?
+    let (DB.Entity accountId account) = accountEntity
+        authorId = case keyToValues accountId of
+          [PersistLiteral_ Escaped authorId'] -> authorId'
+          pv -> error . show $ pv -- FIXME
+        authorUuid = RoomUUID <$> fromJust $ UUID.fromString (BSU.toString authorId)
+    rooms <- getUserRooms authorUuid -- FROMJUST BAD FIXME
+    pure (accountUsername account, accountUsername account, rooms)
+
+  usersDirectory :: FilePath
+  usersDirectory = buildPath </> "users"
+
+  -- FIXME: it'd be better to have type text -> text -> io filepath
+  generateProfile :: (T.Text, T.Text, [T.Text]) -> IO FilePath
+  generateProfile (username, usernameSlug, rooms) = do
+    let pathOut = usersDirectory </> T.unpack usernameSlug <> ".html"
+    pageText <- parseMustacheChildWithConfigVars
+      searchSpace
+      "profile.html"
+      [ ("username", MTypes.String username)
+      , ("usernameSlug", MTypes.String usernameSlug)
+      , ("rooms", MTypes.Array . Vector.fromList $ fmap MTypes.String rooms)
+      ]
+    _ <- writeFile pathOut $ unpack pageText
+    pure pathOut
 
 
 -- TODO: Create entire site from DB. Also copies essential static files...
