@@ -1,0 +1,35 @@
+---
+parent: base.html
+title: New Room
+---
+<p>Create a new room.</p>
+
+<!-- fixme: the form should have a javascript listener not an onclick attrib -->
+<textarea name="description" id="description" placeholder="description of the room. useful for searching for rooms."></textarea>
+<label for="image">Background image:</label><input type="file" id="image" name="image" />
+<input type="submit" onclick="makeRoom();">
+
+<script src="/rest.js"></script>
+<script src="/auth.js"></script>
+<script>
+    // FIXME: error if all fields aren't filled out... at least required ones.
+    async function makeRoom() {
+        const jwt = getJwtCookie();
+        var currentUser = await whoami(jwt);
+        console.log(currentUser)
+        const response = await createRoom(getJwtCookie(), {description: description.value, author: currentUser.userId})
+        console.log(response);
+        const roomUuid = response[0]  // this is actually the link? idk... FIXME
+
+        // upload image
+        let formData = new FormData();           
+        formData.append("image", image.files[0]);
+        await fetch(restApiHost + `${roomUuid}/image`, {
+            method: "POST", 
+            body: formData,
+            headers: {Authorization: jwt}
+        });
+
+        window.location.replace(`/${roomUuid}`);
+        }
+</script>

@@ -6,7 +6,7 @@ title: Admin Control Panel
 <p>Some tools for the owner of this maze to use.</p>
 
 <section id="regenerate-everything" class="pronounced-row">
-<input class="to-be-described button full" type="button" value="regenerate everything" onclick="regenerateEverything();" />
+<input class="to-be-described button full" type="button" value="regenerate everything" onclick="regenerateEverything(getJwtCookie());" />
 <p class="description">Recreate the entire site. This will copy over new styles, refresh room pages, everything!</p>
 </section>
 
@@ -25,7 +25,9 @@ title: Admin Control Panel
 
 </section>
 
+<script src="/auth.js"></script>
 <script src="/rest.js"></script>
+
 
 <section class="pronounced-row">
 <a href="/new-room.html" class="button full to-be-described">create new room</a>

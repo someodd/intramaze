@@ -13,7 +13,6 @@
 module PinkSands.JsonRequests where
 
 import Control.Monad (MonadPlus (mzero))
-import qualified Data.Aeson as Aeson (FromJSON(..), Value (..))
 import GHC.Generics ( Generic )
 import qualified Data.Text.Encoding as TSE
 import qualified Data.ByteString as ByteString (ByteString)
@@ -30,12 +29,22 @@ import Database.Persist (Update)
 import Data.Maybe (catMaybes)
 import qualified Data.ByteString.Lazy as BL
 import PinkSands.JWT (UserClaims)
+import qualified Data.Aeson.Types as Aeson
+import Data.Aeson ((.:))
 
 
 -- | Many room requests (JSON) use this format.
 data GenericRoomRequestUnvalidated = GenericRoomRequestUnvalidated
     { genericRoomRequestUnvalidatedRoom :: Models.Room
-    } deriving (Generic, Show, Aeson.FromJSON)
+    } deriving (Generic, Show)
+    --     } deriving (Generic, Show, Aeson.FromJSON)
+
+
+instance Aeson.FromJSON GenericRoomRequestUnvalidated where
+    parseJSON (Aeson.Object v) =
+        GenericRoomRequestUnvalidated
+            <$> v .: "description"
+    parseJSON invalid = Aeson.typeMismatch "GenericRoomRequestUnvalidated" invalid
 
 
 data GenericRoomRequestValidated = GenericRoomRequestValidated
@@ -65,11 +74,9 @@ class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
 data RoomUpdateValidated = RoomUpdateValidated JWT.UserClaims [Update Models.Room] deriving (Generic)
 
 
-
 instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated where
     validateRequest roomUnvalidated = do
         userClaims <- getUserClaimsOrFail
-        -- needs to validate token too... needs to be same as author or root
         let
             room = genericRoomRequestUnvalidatedRoom roomUnvalidated
             -- FIXME: I feel like this should be possible with some more abstraction so

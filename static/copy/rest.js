@@ -1,3 +1,5 @@
+// FIXME: stuff should return response not nothing!
+
 /**
  * Interact with the PinkSands REST API.
  * 
@@ -18,10 +20,17 @@
  * @param {String} endpoint - The endpoint to make a request to. See also `restApiHost`.
  * @param {String} method - The HTTP method to use during the request.
  * @param {Object} body - The object to use in the JSON body during the request.
+ * @param {Object} jwt - JSON Web Token authenticating the request.
  * @param {Object} headers - HTTP headers as object.
  * @returns {Object} The JSON response.
  */
-async function restApiRequest(endpoint, method, body, headers) {
+async function restApiRequest(endpoint, method, body, jwt, headers) {
+    // there's gotta be a better way of checking for the presence of arguments
+    if (typeof jwt !== 'undefined' && jwt !== null) {
+        const authorizationHeader = {Authorization: jwt};
+        headers = typeof headers === undefined || headers == null ? authorizationHeader : Object.assign(headers, authorizationHeader);
+        console.log(headers);
+    }
     var requestObject = {
         method: method,
         headers: Object.assign({'Content-Type': 'application/json'}, headers)
@@ -29,6 +38,8 @@ async function restApiRequest(endpoint, method, body, headers) {
     if (typeof body !== 'undefined' && body !== null) {
         requestObject = Object.assign(requestObject, {body: JSON.stringify(body)});
     }
+    console.log("wow")
+    console.log(headers)
     console.log(requestObject);
     const response = await fetch(restApiHost + endpoint, requestObject);
     const responseJSON = await response.json();
@@ -83,6 +94,17 @@ async function deleteRoom(uuid) {
     console.log(response);
 }
 
+/**
+ * Make a new room.
+ * @param {String} jwt - authentication.
+ * @param {String} description - text which shows up on the room.
+ */
+async function createRoom(jwt, description) {
+    const response = await restApiRequest('rooms', 'POST', {description: description}, jwt)
+    console.log(response)
+    return response
+}
+
 
 /**
  * (Re)create the static files for a specific room.
@@ -97,10 +119,11 @@ async function regenerateRoom(uuid) {
 
 /**
  * Recreate/rebuild all of the site's static files.
+ * @param {String} jwt - JSON Web Token with root permissions.
  */
-async function regenerateEverything() {
+async function regenerateEverything(jwt) {
     // Calls the REST API endpoint for (re)creating all the static files.
-    const response = await restApiRequest('generate', 'GET');
+    const response = await restApiRequest('generate', 'GET', null, jwt); // FIXME: maybe could just accept a jwt instead of dealing with headers directly?
     console.log(response);
 }
 
@@ -153,7 +176,7 @@ async function register(username, password) {
  * @returns ...
  */
 async function whoami(jwt) {
-    const response = await restApiRequest('users/whoami', 'GET', null, {Authorization: jwt});
+    const response = await restApiRequest('users/whoami', 'GET', null, jwt);
     console.log(response);
     return response;
 }

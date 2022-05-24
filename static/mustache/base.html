@@ -17,9 +17,11 @@
       <nav id="site-navigation">
         <ul class="bar-of-items">
           <li><h1><a href="/">pinksands</a></h1></li>
+          <!-- should only show admin link if logged as admin -->
           <li><a href="/admin.html">admin</a></li>
           <li><a href="/login.html">login</a></li>
           <li><a href="/register.html">register</a></li>
+          <li><a href="/new-room.html">new room</a></li>
           <li><a href="https://github.com/someodd/pinksands/">made by someodd</a></li>
           {{#extraLinks}}
           <li>{{.}}</li>

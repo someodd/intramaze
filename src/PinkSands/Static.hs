@@ -28,13 +28,12 @@ import qualified Database.Persist.Sql as DB
 import Web.Scotty.Trans (ActionT)
 import PinkSands.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans (MonadTrans)
-import Control.Monad.IO.Class (MonadIO)
 import qualified Data.UUID as UUID
 import Database.Persist (keyToValues, LiteralType (Escaped))
 import Database.Persist.PersistValue (PersistValue(..))
 import Data.Maybe (fromJust)
 import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.Text.Encoding as TSE
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -252,18 +251,22 @@ buildProfilePages = do
   (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse generateProfile usernameSlugPairs
   pure generatedProfilePaths
  where
-  getUserRooms :: (MonadTrans t, MonadIO (t ConfigM))
-    => RoomUUID
-    -> t ConfigM [T.Text]
+  getUserRooms
+    :: RoomUUID
+    -> ActionT Middle.Error ConfigM [T.Text]
   getUserRooms userId = do
     (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
     case rooms of
       [] -> pure []
-      ens -> do
+      ens ->
         -- FIXME: head is bad!
         let roomIds = fmap (\(DB.Entity accountId _) -> head $ keyToValues accountId) ens
-            roomUuids = fmap (\(PersistText id') -> id') roomIds
-        pure roomUuids
+        in traverse matchText roomIds
+
+  -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
+  matchText :: PersistValue -> ActionT Middle.Error ConfigM T.Text
+  matchText (PersistLiteral_ Escaped t) = pure $ TSE.decodeUtf8 t
+  matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
 
   getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(T.Text, T.Text, [T.Text])]
   getUsernameSlugPairs = do
