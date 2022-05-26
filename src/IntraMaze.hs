@@ -5,9 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module PinkSands where
+module IntraMaze where
 
--- FIXME: start moving things to PinkSands.Routes or PinkSands.Actions?
+-- FIXME: start moving things to IntraMaze.Routes or IntraMaze.Actions?
 -- FIXME: qualified imports?
 import Network.Wai.Middleware.Cors
 import Protolude (putText, threadDelay, forever, forkIO)
@@ -20,8 +20,8 @@ import Data.Default (def)
 import qualified Data.Text as T
 --import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import qualified Database.Persist.Postgresql as DB
-import PinkSands.Models (migrateAll)
-import qualified PinkSands.ChatWebSocket as CWS (application, newServerState)
+import IntraMaze.Models (migrateAll)
+import qualified IntraMaze.ChatWebSocket as CWS (application, newServerState)
 import Control.Concurrent (MVar, newMVar)
 import Network.HTTP.Types.Status (internalServerError500)
 import Network.Wai (Middleware, Response)
@@ -37,12 +37,12 @@ import Web.Scotty.Trans (Options, ScottyT, defaultHandler,
 import qualified Network.Wai.Handler.WebSockets as WaiWs
 import Control.Monad (when)
 import Network.WebSockets.Connection (pingThread)
-import PinkSands.ChatWebSocket (ServerState)
-import qualified PinkSands.Middle as Middle
+import IntraMaze.ChatWebSocket (ServerState)
+import qualified IntraMaze.Middle as Middle
 import Data.Text.Encoding as TSE
-import qualified PinkSands.Actions as Actions
-import PinkSands.Config
-import PinkSands.Static (setupEssentials)
+import qualified IntraMaze.Actions as Actions
+import IntraMaze.Config
+import IntraMaze.Static (setupEssentials)
 
 
 main :: IO ()
@@ -102,9 +102,9 @@ getConnectionString e = do
 
 getDefaultConnectionString :: Environment -> DB.ConnectionString
 getDefaultConnectionString Development =
-  "host=localhost port=5432 user=postgres dbname=pinksands_development"
+  "host=localhost port=5432 user=postgres dbname=IntraMaze_development"
 getDefaultConnectionString Production =
-  "host=localhost port=5432 user=postgres dbname=pinksands_production"
+  "host=localhost port=5432 user=postgres dbname=IntraMaze_production"
 getDefaultConnectionString Test =
   "host=localhost port=5432 user=testpguser password=testpguser dbname=testpgdatabase"
 

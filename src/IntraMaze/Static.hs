@@ -4,14 +4,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
-module PinkSands.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages) where
+{-# LANGUAGE DeriveGeneric #-}
+module IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages) where
 
+import GHC.Generics ( Generic )
 import qualified Data.Vector as Vector (fromList)
 import Data.List (intercalate)
 import Data.HashMap.Strict ( fromList )
 import Data.Text (unpack, pack)
 import qualified Text.Mustache.Types as M (Value(..))
-import PinkSands.Models (RoomUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
+import IntraMaze.Models (RoomUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
 import qualified Data.ByteString.Lazy as BSL (writeFile, ByteString)
 import System.FilePath (joinPath, (</>), takeDirectory)
 import System.Directory (createDirectoryIfMissing, copyFile, doesDirectoryExist)
@@ -21,19 +23,17 @@ import Text.Mustache (ToMustache (toMustache))
 import qualified Data.HashMap.Strict as HashMap
 --import Control.Monad (filterM)
 import qualified Data.Text as T
-import qualified PinkSands.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
+import qualified IntraMaze.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
 import qualified Text.Mustache.Types as MTypes
-import qualified PinkSands.Middle as Middle
+import qualified IntraMaze.Middle as Middle
 import qualified Database.Persist.Sql as DB
 import Web.Scotty.Trans (ActionT)
-import PinkSands.Config (ConfigM)
+import IntraMaze.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.UUID as UUID
 import Database.Persist (keyToValues, LiteralType (Escaped))
 import Database.Persist.PersistValue (PersistValue(..))
-import Data.Maybe (fromJust)
 import qualified Data.ByteString.UTF8 as BSU
-import qualified Data.Text.Encoding as TSE
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -78,6 +78,23 @@ searchSpace :: [FilePath]
 searchSpace = [mustacheTemplatesPath, mustacheBuildThesePath]
 
 
+-- FIXME: I feel like this could be way more elegant! huge overlap with RoomObject. can't i use generic here or something?
+-- FIXME: rename to RoomPartial?
+-- FIXME: could share the same list function almost with slight tweaking
+newtype RoomMustache = RoomMustache (RoomUUID, Room) deriving (Generic)
+instance ToMustache RoomMustache where
+  toMustache (RoomMustache (roomUuid, room)) =
+    M.Object . HashMap.fromList $
+      [ ("imagePath" :: T.Text, maybe M.Null M.String (roomBgFileName room))
+      , ("description", maybe M.Null M.String (roomDescription room))
+      -- FIXME/TODO: should it perhaps be M.Null instead of bool?
+      , ("title", maybe M.Null M.String (roomTitle room))
+      , ("id", M.String . pack . show $ roomUuid)
+      ]
+
+
+-- FIXME: rename to RoomFull
+-- FIXME: why use this over Room? Just because of the ID? oh and the rooms... associated...
 -- | Object for Mustache templates.
 data RoomObject = RoomObject
   { roomObjId :: RoomUUID
@@ -240,6 +257,42 @@ mustacheBuild  fileName = do
   pure outPath
 
 
+usersDirectory :: FilePath
+usersDirectory = buildPath </> "users"
+
+
+-- FIXME: create slug here! why this type rather than IO FilePath?!
+-- | Build a specific user's profile.
+--
+-- Argument is the Author ID from the table.
+buildProfile :: (Account, [RoomMustache]) -> IO FilePath
+buildProfile (account, rooms) = do
+  let username = accountUsername account
+      usernameSlug = username -- FIXME: need to slugify
+      pathOut = usersDirectory </> T.unpack usernameSlug <> ".html"
+  pageText <- parseMustacheChildWithConfigVars
+    searchSpace
+    "profile.html"
+    [ ("username", MTypes.String username)
+    , ("usernameSlug", MTypes.String usernameSlug)
+    , ("rooms", MTypes.Array . Vector.fromList $ fmap toMustache rooms)
+    ]
+  _ <- writeFile pathOut $ unpack pageText
+  pure pathOut
+
+
+-- also shouldn't this belong to buildProfile or something?
+accountEntityToUuid :: DB.Entity Account -> Either String (RoomUUID, Account)
+accountEntityToUuid accountEntity = do
+  let (DB.Entity accountId account) = accountEntity
+  authorId <- case keyToValues accountId of
+    [PersistLiteral_ Escaped authorId'] -> Right authorId'
+    pv -> Left $ show pv  ++ " was not of expected type when looking for author UUID"
+  case UUID.fromString $ BSU.toString authorId of
+    Nothing -> Left "Author UUID somehow failed to be parsed as a UUID!"
+    Just uuid -> Right (RoomUUID uuid, account)
+
+
 -- FIXME: this is SO messy!
 -- FIXME: this is weird because it's the only one that hits the database...
 -- refactor? should it not even get usernames? The output type is weird.
@@ -248,27 +301,31 @@ buildProfilePages :: ActionT Middle.Error ConfigM [FilePath]
 buildProfilePages = do
   _ <- liftIO $ createDirectoryIfMissing True usersDirectory
   usernameSlugPairs <- getUsernameSlugPairs
-  (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse generateProfile usernameSlugPairs
+  (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse buildProfile usernameSlugPairs
   pure generatedProfilePaths
  where
   getUserRooms
     :: RoomUUID
-    -> ActionT Middle.Error ConfigM [T.Text]
+    -> ActionT Middle.Error ConfigM [RoomMustache]
   getUserRooms userId = do
     (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
     case rooms of
       [] -> pure []
-      ens ->
-        -- FIXME: head is bad!
-        let roomIds = fmap (\(DB.Entity accountId _) -> head $ keyToValues accountId) ens
-        in traverse matchText roomIds
+      ens -> traverse roomEntityToRoomMustache ens
+
+  roomEntityToRoomMustache (DB.Entity roomId room) = do
+    uuid <- matchText . head $ keyToValues roomId
+    pure . RoomMustache $ (uuid, room)
 
   -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
-  matchText :: PersistValue -> ActionT Middle.Error ConfigM T.Text
-  matchText (PersistLiteral_ Escaped t) = pure $ TSE.decodeUtf8 t
+  matchText :: PersistValue -> ActionT Middle.Error ConfigM RoomUUID
+  matchText (PersistLiteral_ Escaped t) = do
+    case UUID.fromString $ BSU.toString t of
+      Nothing -> Middle.jsonError $ Middle.ApiError 500 "Author UUID somehow failed to be parsed as a UUID!"
+      Just uuid -> pure . RoomUUID $ uuid
   matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
 
-  getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(T.Text, T.Text, [T.Text])]
+  getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(Account, [RoomMustache])]
   getUsernameSlugPairs = do
     -- FIXME/NOTE: how to only select username?
     (accounts :: [DB.Entity Account]) <- Middle.runDB (DB.selectList [] [])
@@ -278,35 +335,18 @@ buildProfilePages = do
         traverse createTriplet accounts
       [] -> pure []
 
+  -- FIXME: why does this even exist?!
   -- TODO/FIXME: last value needs to be a RoomUUID
-  createTriplet :: DB.Entity Account -> ActionT Middle.Error ConfigM (T.Text, T.Text, [T.Text])
+  -- FIXME: needs to be renamed and documented better and refectored/changed
+  createTriplet :: DB.Entity Account -> ActionT Middle.Error ConfigM (Account, [RoomMustache])
   createTriplet accountEntity = do
     -- FIXME/NOTE: I hate this. This is so ugly. Is this really the best Persist can do for giving me
     -- the value of the id pertaining to the database entity?
-    let (DB.Entity accountId account) = accountEntity
-        authorId = case keyToValues accountId of
-          [PersistLiteral_ Escaped authorId'] -> authorId'
-          pv -> error . show $ pv -- FIXME
-        authorUuid = RoomUUID <$> fromJust $ UUID.fromString (BSU.toString authorId)
-    rooms <- getUserRooms authorUuid -- FROMJUST BAD FIXME
-    pure (accountUsername account, accountUsername account, rooms)
-
-  usersDirectory :: FilePath
-  usersDirectory = buildPath </> "users"
-
-  -- FIXME: it'd be better to have type text -> text -> io filepath
-  generateProfile :: (T.Text, T.Text, [T.Text]) -> IO FilePath
-  generateProfile (username, usernameSlug, rooms) = do
-    let pathOut = usersDirectory </> T.unpack usernameSlug <> ".html"
-    pageText <- parseMustacheChildWithConfigVars
-      searchSpace
-      "profile.html"
-      [ ("username", MTypes.String username)
-      , ("usernameSlug", MTypes.String usernameSlug)
-      , ("rooms", MTypes.Array . Vector.fromList $ fmap MTypes.String rooms)
-      ]
-    _ <- writeFile pathOut $ unpack pageText
-    pure pathOut
+    case accountEntityToUuid accountEntity of
+      Left errorString -> Middle.jsonError $ Middle.ApiError 500 errorString 
+      Right (authorUuid, account) -> do
+        rooms <- getUserRooms authorUuid
+        pure (account, rooms)
 
 
 -- TODO: Create entire site from DB. Also copies essential static files...

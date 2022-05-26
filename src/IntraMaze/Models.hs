@@ -13,7 +13,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module PinkSands.Models where
+module IntraMaze.Models where
 
 import GHC.Generics ( Generic )
 import Data.Text (Text)
@@ -146,6 +146,10 @@ User json
   salt BS.ByteString
   UniqueUsername username
 -}
+
+
+-- would it be better if portals was field of rooms?
+--instance ToMustache Room
 
 -- change roomuuid to uuid! FIXME (account should not be roomuuid but instead just Uuid! or DbUuid or something)
 

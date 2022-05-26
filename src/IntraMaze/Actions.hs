@@ -5,7 +5,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module PinkSands.Actions where
+module IntraMaze.Actions where
 
 import Data.Aeson ( FromJSON(..), Value(Null) )
 import GHC.Generics ( Generic )
@@ -16,22 +16,22 @@ import qualified Data.Text as T
 import Data.Text.Lazy (Text)
 import qualified Database.Persist as DB
 import qualified Database.Persist.Postgresql as DB
-import PinkSands.Models (AccountId, Room (..), Key(..), Portal, RoomUUID (..), EntityField(..), PortalId, Account (..))
+import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RoomUUID (..), EntityField(..), PortalId, Account (..))
 import qualified Data.UUID as UUID
 import Network.HTTP.Types.Status (created201,
     notFound404, status204, status404, status403)
 import Network.Wai.Parse (FileInfo(..))
 import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
-import PinkSands.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
+import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
 import Database.Persist (Entity (entityVal), Filter (Filter), FilterValue (..))
-import qualified PinkSands.Middle as Middle
+import qualified IntraMaze.Middle as Middle
 import qualified Data.Text.Lazy as TL
-import qualified PinkSands.JWT as JWT (makeToken, UserClaims (userId))
-import Data.Text.Encoding as TSE
-import PinkSands.JWT (UserClaims (..))
-import qualified PinkSands.JsonRequests as JsonRequests
-import PinkSands.Config
+import qualified IntraMaze.JWT as JWT (makeToken, UserClaims (userId))
+import Data.Text.Encoding as TSE ( decodeUtf8 )
+import IntraMaze.JWT (UserClaims (..))
+import qualified IntraMaze.JsonRequests as JsonRequests
+import IntraMaze.Config ( ConfigM )
 
 
 type Action = ActionT Middle.Error ConfigM ()
@@ -351,8 +351,6 @@ getPortalsA = do
   json (ts :: [DB.Entity Portal])
 
 
--- FIXME: way too messy. use monads or something! or your jsonrequest validation system!
--- FIXME: what an absolute nightmare. can use validation system.
 -- | update room records. currently only supports updating the title and description.
 -- FIXME: needs to be fixed because it should be able to update many fields at once! this is terrible.
 patchRoomA :: Action

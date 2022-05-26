@@ -1,9 +1,9 @@
 // FIXME: stuff should return response not nothing!
 
 /**
- * Interact with the PinkSands REST API.
+ * Interact with the IntraMaze REST API.
  * 
- * Generic PinkSands REST API JavaScript interface.
+ * Generic IntraMaze REST API JavaScript interface.
  */
 
 
@@ -206,7 +206,7 @@ async function showResults(val, buttonId) {
     for (term in terms) {
         var room = terms[term];
         // this feels very sloppy FIXME. also hardcoding room URL for image is bad
-        list += '<div class="result" style="background-image: url(/rooms/' + room.id + '/' + room.bgFileName + ');" onclick="document.getElementById(\'q\').value = \'' + room.id + '\';res.innerHTML=\'\'; document.getElementById(\'' + buttonId + '\').disabled = false;"><dt>' + room.title + ' <span class="small">(' + room.id + ")</small></dt><dd><img src=\'/rooms/" + room.id + "/" + room.bgFileName + "\' width=75px height=75px/>" + room.description + '</dd></div>';
+        list += '<div class="result" style="background-image: url(/rooms/' + room.id + '/' + room.bgFileName + ');" onclick="document.getElementById(\'q\').value = \'' + room.id + '\';res.innerHTML=\'\'; document.getElementById(\'' + buttonId + '\').disabled = false;"><dt>' + room.title + ' <span class="small">(' + room.id + ")</span></dt><dd><img src=\'/rooms/" + room.id + "/" + room.bgFileName + "\' width=75px height=75px/>" + room.description + '</dd></div>';
     }
     res.innerHTML = '<dl>' + list + '</dl>';
 

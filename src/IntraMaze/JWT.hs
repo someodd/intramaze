@@ -18,7 +18,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
-module PinkSands.JWT where
+module IntraMaze.JWT where
 
 import           Web.Libjwt
 import           Control.Arrow                  ( left )
@@ -46,10 +46,10 @@ import qualified Data.Aeson as A
 
 type Token = ByteString
 
--- FIXME: make an envvar a part of getConfig in PinkSands.hs
+-- FIXME: make an envvar a part of getConfig in IntraMaze.hs
 -- | The site-wide secret pepper used to salt password hashes, in conjunction with the per-user salt.
 -- It is important to note that in the future this will be a part of the configuration specification
--- as seen in PinkSands.hs.
+-- as seen in IntraMaze.hs.
 globalPepper :: BS.ByteString 
 globalPepper = "hwaL*C4<U#2-0R5%~]B.Vd/+&$5ofxXQ^"
 

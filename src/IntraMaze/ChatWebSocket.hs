@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This started of as a copy of the websocket chat demo.
-module PinkSands.ChatWebSocket where
+module IntraMaze.ChatWebSocket where
 
 import Data.Char (isPunctuation, isSpace)
 import Data.Text (Text)
@@ -13,10 +13,10 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import qualified Network.WebSockets as WS
-import PinkSands.Models (RoomUUID (RoomUUID))
+import IntraMaze.Models (RoomUUID (RoomUUID))
 import qualified Data.UUID as UUID
 import Data.Maybe (isJust)
---import PinkSands.Middle
+--import IntraMaze.Middle
 --import qualified Database.Persist as DB
 
 

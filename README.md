@@ -1,4 +1,4 @@
-# PinkSands
+# IntraMaze
 
 I use Debian (unstable).
 
@@ -34,3 +34,8 @@ sudo -u postgres psql
 CREATE USER testpguser with PASSWORD 'testpguser';
 CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
 ```
+
+
+## `static/`
+
+The `static/mustache-build` are literal pages to build (like copying + running through parser), whereas `static/mustache` is simply for templates that get used to build pages.

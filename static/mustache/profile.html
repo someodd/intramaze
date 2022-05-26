@@ -7,6 +7,15 @@ title: "{{username}}"
 
 Here are the rooms they've made:
 
-<ul>
-    {{#rooms}}<li><a href="/rooms/{{.}}">{{.}}</a></li>{{/rooms}}
-</ul>
+<!-- I should use similar style thing to the portal search/room search. -->
+<dl>
+    {{#rooms}}
+
+    <div class="result" style="background-image: url('/rooms/{{id}}/{{imagePath}}');" href="/rooms/{{id}}">
+        <dt><a href="/rooms/{{id}}">{{title}} <span class="small">{{id}}</span></a></dt>
+        <dd><img src='/rooms/{{id}}/{{imagePath}}' width=75px height=75px/>{{description}}</dd>
+    </div>
+
+    {{/rooms}}
+
+</dl>

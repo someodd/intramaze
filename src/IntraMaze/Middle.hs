@@ -3,7 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module PinkSands.Middle where
+module IntraMaze.Middle where
 
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Reader (asks)
@@ -15,7 +15,7 @@ import GHC.Generics (Generic)
 import Web.Scotty.Trans (ActionT, finish, json)
 import qualified Web.Scotty.Trans as Scotty (status)
 
-import PinkSands.Config
+import IntraMaze.Config
 
 
 data ApiError = ApiError

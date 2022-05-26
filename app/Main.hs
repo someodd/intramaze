@@ -2,4 +2,4 @@ module Main
   ( main
   ) where
 
-import PinkSands (main)
+import IntraMaze (main)

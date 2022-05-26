@@ -13,7 +13,7 @@ The Environmental Environment Configuration System
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
-module PinkSands.Config
+module IntraMaze.Config
     (
     -- * Configuration for Scotty
     -- Configuration specifically for code on the Scotty library level, like the database pool.
