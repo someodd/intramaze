@@ -5,7 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-module IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages) where
+module IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile) where
 
 import GHC.Generics ( Generic )
 import qualified Data.Vector as Vector (fromList)
@@ -281,16 +281,27 @@ buildProfile (account, rooms) = do
   pure pathOut
 
 
--- also shouldn't this belong to buildProfile or something?
-accountEntityToUuid :: DB.Entity Account -> Either String (RoomUUID, Account)
-accountEntityToUuid accountEntity = do
-  let (DB.Entity accountId account) = accountEntity
-  authorId <- case keyToValues accountId of
-    [PersistLiteral_ Escaped authorId'] -> Right authorId'
-    pv -> Left $ show pv  ++ " was not of expected type when looking for author UUID"
-  case UUID.fromString $ BSU.toString authorId of
-    Nothing -> Left "Author UUID somehow failed to be parsed as a UUID!"
-    Just uuid -> Right (RoomUUID uuid, account)
+-- FIXME: should maybe be in DB?
+getUserRooms
+  :: RoomUUID
+  -> ActionT Middle.Error ConfigM [RoomMustache]
+getUserRooms userId = do
+  (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
+  case rooms of
+    [] -> pure []
+    ens -> traverse roomEntityToRoomMustache ens
+ where
+  roomEntityToRoomMustache (DB.Entity roomId room) = do
+    uuid <- matchText . head $ keyToValues roomId
+    pure . RoomMustache $ (uuid, room)
+
+  -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
+  matchText :: PersistValue -> ActionT Middle.Error ConfigM RoomUUID
+  matchText (PersistLiteral_ Escaped t) = do
+    case UUID.fromString $ BSU.toString t of
+      Nothing -> Middle.jsonError $ Middle.ApiError 500 "Author UUID somehow failed to be parsed as a UUID!"
+      Just uuid -> pure . RoomUUID $ uuid
+  matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
 
 
 -- FIXME: this is SO messy!
@@ -304,27 +315,17 @@ buildProfilePages = do
   (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse buildProfile usernameSlugPairs
   pure generatedProfilePaths
  where
-  getUserRooms
-    :: RoomUUID
-    -> ActionT Middle.Error ConfigM [RoomMustache]
-  getUserRooms userId = do
-    (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
-    case rooms of
-      [] -> pure []
-      ens -> traverse roomEntityToRoomMustache ens
-
-  roomEntityToRoomMustache (DB.Entity roomId room) = do
-    uuid <- matchText . head $ keyToValues roomId
-    pure . RoomMustache $ (uuid, room)
-
-  -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
-  matchText :: PersistValue -> ActionT Middle.Error ConfigM RoomUUID
-  matchText (PersistLiteral_ Escaped t) = do
-    case UUID.fromString $ BSU.toString t of
-      Nothing -> Middle.jsonError $ Middle.ApiError 500 "Author UUID somehow failed to be parsed as a UUID!"
-      Just uuid -> pure . RoomUUID $ uuid
-  matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
-
+  -- also shouldn't this belong to buildProfile or something?
+  accountEntityToUuid :: DB.Entity Account -> Either String (RoomUUID, Account)
+  accountEntityToUuid accountEntity = do
+    let (DB.Entity accountId account) = accountEntity
+    authorId <- case keyToValues accountId of
+      [PersistLiteral_ Escaped authorId'] -> Right authorId'
+      pv -> Left $ show pv  ++ " was not of expected type when looking for author UUID"
+    case UUID.fromString $ BSU.toString authorId of
+      Nothing -> Left "Author UUID somehow failed to be parsed as a UUID!"
+      Just uuid -> Right (RoomUUID uuid, account)
+  
   getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(Account, [RoomMustache])]
   getUsernameSlugPairs = do
     -- FIXME/NOTE: how to only select username?

@@ -23,7 +23,7 @@ import Network.HTTP.Types.Status (created201,
 import Network.Wai.Parse (FileInfo(..))
 import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
-import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
+import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile)
 import Database.Persist (Entity (entityVal), Filter (Filter), FilterValue (..))
 import qualified IntraMaze.Middle as Middle
 import qualified Data.Text.Lazy as TL
@@ -49,7 +49,7 @@ instance FromJSON UsernamePassword where
 -- | Gets the user's UUID.
 getWhoamiA :: Action
 getWhoamiA = do
-    (uc :: UserClaims) <- JsonRequests.getUserClaimsOrFail 
+    (uc :: UserClaims) <- JsonRequests.getUserClaimsOrFail
     json uc
 
 
@@ -206,6 +206,22 @@ getGenerateProfiles = do
       json pathsOfProfilePages
 
 
+-- FIXME: root or corresponding user (user corresponds to ID)
+-- | Re/generate an account page for a specific user.
+getGenerateSpecificProfile :: Action
+getGenerateSpecificProfile = do
+  (i :: RoomUUID) <- param "id"
+  _ <- mustMatchUuidOrRoot i
+  rooms <- getUserRooms i
+  maybeAccount <- Middle.runDB (DB.get (AccountKey i))
+  case maybeAccount of
+    Nothing ->
+      Middle.jsonError $ Middle.ApiError 404 $ "Attempted to update the profile belonging to user of id " ++ show i ++ ", but no such user ID exists in database."
+    Just account -> do
+      filePath <- liftIO $ buildProfile (account, rooms)
+      json [filePath]
+
+
 -- FIXME: needs to use directory for room ID...
 -- FIXME: can I accept token in json body AND all the other stuff?!
 -- | Endpoint for uploading the room image (for the specified room).
@@ -252,6 +268,22 @@ getRoomSearchA = do
   json (m :: [DB.Entity Room])
 
 
+-- FIXME: should these permission type things get moved to JWT or permissions or something?
+-- FIXME: very similar to other must be author or root
+-- | Ensures that the specified UUID matches the JWT, or that the JWT authenticates
+-- the user as having root privileges.
+mustMatchUuidOrRoot :: RoomUUID -> ActionT Middle.Error ConfigM ()
+mustMatchUuidOrRoot roomUuid = do
+    userClaims <- JsonRequests.getUserClaimsOrFail
+    if RoomUUID (userId userClaims) == roomUuid || isRoot userClaims
+      then pure ()
+      else do
+        status status403
+        json $ Middle.ApiError 403 "Must be the user of the profile attempting to update or root to perform this action."
+        finish
+
+
+-- FIXME: why duplicate?
 mustBeRoomAuthorOrRoot :: RoomUUID -> UserClaims -> ActionT Middle.Error ConfigM Room
 mustBeRoomAuthorOrRoot roomUuid userClaims = do
     m <- Middle.runDB $ DB.get (RoomKey roomUuid)

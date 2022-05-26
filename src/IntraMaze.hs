@@ -213,6 +213,7 @@ application c = do
 
   -- user authorization
   get "/users/generate" Actions.getGenerateProfiles
+  get "/users/:id/generate" Actions.getGenerateSpecificProfile
   get "/users/whoami" Actions.getWhoamiA 
   post "/users" Actions.postUserA
   post "/users/login" Actions.postUserLoginA
