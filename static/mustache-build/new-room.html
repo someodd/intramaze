@@ -19,17 +19,17 @@ title: New Room
         console.log(currentUser)
         const response = await createRoom(getJwtCookie(), {description: description.value, author: currentUser.userId})
         console.log(response);
-        const roomUuid = response[0]  // this is actually the link? idk... FIXME
+        const rowUuid = response[0]  // this is actually the link? idk... FIXME
 
         // upload image
         let formData = new FormData();           
         formData.append("image", image.files[0]);
-        await fetch(restApiHost + `${roomUuid}/image`, {
+        await fetch(restApiHost + `${rowUuid}/image`, {
             method: "POST", 
             body: formData,
             headers: {Authorization: jwt}
         });
 
-        window.location.replace(`/${roomUuid}`);
+        window.location.replace(`/${rowUuid}`);
         }
 </script>

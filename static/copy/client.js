@@ -367,7 +367,7 @@ $(document).ready(function () {
     $('#join-form').submit(function () {
         $('#warnings').html('');
         var user = $('#user').val();
-        var uuid = $('#roomUuid').val();
+        var uuid = $('#rowUuid').val();
         var ws = createChatSocket();
 
 

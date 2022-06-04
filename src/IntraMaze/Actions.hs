@@ -16,7 +16,7 @@ import qualified Data.Text as T
 import Data.Text.Lazy (Text)
 import qualified Database.Persist as DB
 import qualified Database.Persist.Postgresql as DB
-import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RoomUUID (..), EntityField(..), PortalId, Account (..))
+import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RowUUID (..), EntityField(..), PortalId, Account (..))
 import qualified Data.UUID as UUID
 import Network.HTTP.Types.Status (created201,
     notFound404, status204, status404, status403)
@@ -118,7 +118,7 @@ postRoomsA = do
 
 -- FIXME: where to put this instead?
 -- FIXME: messy because you're not used to dealing with transformers and monads this much
--- | Static generation of a room based off the RoomUUID.
+-- | Static generation of a room based off the RowUUID.
 --
 -- The return value is "Maybe FilePath" instead of simply "FilePath," because
 -- no room by the supplied `uuid` may exist!
@@ -126,7 +126,7 @@ postRoomsA = do
 -- Helper function.
 generateRoom
   :: (MonadTrans t, MonadIO (t ConfigM))
-  => RoomUUID
+  => RowUUID
   -> t ConfigM (Maybe FilePath)
 generateRoom uuid = do
   roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
@@ -143,7 +143,7 @@ generateRoom uuid = do
 -- | REST endpoint for calling for the static HTML file of a room.
 getRoomGenerateA :: Action
 getRoomGenerateA = do
-  (i :: RoomUUID) <- param "id"
+  (i :: RowUUID) <- param "id"
   roomPathMaybe <- generateRoom i
   case roomPathMaybe of
     Nothing ->
@@ -154,17 +154,17 @@ getRoomGenerateA = do
 
 
 -- FIXME: should produce error if no room author
-getRoomAuthor :: RoomUUID -> ActionT Middle.Error ConfigM (Either Middle.ApiError AccountId)
-getRoomAuthor roomUuid = do
-  m <- Middle.runDB (DB.get (RoomKey roomUuid))
+getRoomAuthor :: RowUUID -> ActionT Middle.Error ConfigM (Either Middle.ApiError AccountId)
+getRoomAuthor rowUuid = do
+  m <- Middle.runDB (DB.get (RoomKey rowUuid))
   case m of
     Nothing -> pure . Left $ Middle.ApiError 404 "not found"
     Just t -> pure $ Right $ roomAuthor (t :: Room)
 
 
 -- | Error out if no room...
-getRoomAuthor' :: RoomUUID -> ActionT Middle.Error ConfigM AccountId
-getRoomAuthor' roomUuid = getRoomAuthor roomUuid >>= JsonRequests.failLeft
+getRoomAuthor' :: RowUUID -> ActionT Middle.Error ConfigM AccountId
+getRoomAuthor' rowUuid = getRoomAuthor rowUuid >>= JsonRequests.failLeft
 
 
 -- FIXME: should have separate thing for just regenerating rooms nad not entire site?
@@ -210,7 +210,7 @@ getGenerateProfiles = do
 -- | Re/generate an account page for a specific user.
 getGenerateSpecificProfile :: Action
 getGenerateSpecificProfile = do
-  (i :: RoomUUID) <- param "id"
+  (i :: RowUUID) <- param "id"
   _ <- mustMatchUuidOrRoot i
   rooms <- getUserRooms i
   maybeAccount <- Middle.runDB (DB.get (AccountKey i))
@@ -231,7 +231,7 @@ postRoomsImageA :: Action
 postRoomsImageA = do
   -- we need to be the room author to do this. get room author and then check that
   -- author in token matches with jwtUserClaim check wahtever FIXME
-  (i :: RoomUUID) <- param "id"
+  (i :: RowUUID) <- param "id"
   (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   _ <- mustBeRoomAuthorOrRoot i userClaims
   files' <- files
@@ -247,7 +247,7 @@ postRoomsImageA = do
 
 getRoomA :: Action
 getRoomA = do
-  -- can fix this by importing and creating an instance of import Web.Scotty.Action (Parsable) for RoomUUID
+  -- can fix this by importing and creating an instance of import Web.Scotty.Action (Parsable) for RowUUID
   i <- param "id"
   --m <- runDB (DB.getBy (UniqueRoomID i))
   --m <- runDB (DB.get (toKey i))
@@ -272,10 +272,10 @@ getRoomSearchA = do
 -- FIXME: very similar to other must be author or root
 -- | Ensures that the specified UUID matches the JWT, or that the JWT authenticates
 -- the user as having root privileges.
-mustMatchUuidOrRoot :: RoomUUID -> ActionT Middle.Error ConfigM ()
-mustMatchUuidOrRoot roomUuid = do
+mustMatchUuidOrRoot :: RowUUID -> ActionT Middle.Error ConfigM ()
+mustMatchUuidOrRoot rowUuid = do
     userClaims <- JsonRequests.getUserClaimsOrFail
-    if RoomUUID (userId userClaims) == roomUuid || isRoot userClaims
+    if RowUUID (userId userClaims) == rowUuid || isRoot userClaims
       then pure ()
       else do
         status status403
@@ -284,16 +284,16 @@ mustMatchUuidOrRoot roomUuid = do
 
 
 -- FIXME: why duplicate?
-mustBeRoomAuthorOrRoot :: RoomUUID -> UserClaims -> ActionT Middle.Error ConfigM Room
-mustBeRoomAuthorOrRoot roomUuid userClaims = do
-    m <- Middle.runDB $ DB.get (RoomKey roomUuid)
+mustBeRoomAuthorOrRoot :: RowUUID -> UserClaims -> ActionT Middle.Error ConfigM Room
+mustBeRoomAuthorOrRoot rowUuid userClaims = do
+    m <- Middle.runDB $ DB.get (RoomKey rowUuid)
     case m of
       Nothing -> do
           status status404
           finish
       Just room -> do
           -- FIXME: need to rename roomuuid to MyUUID
-          if roomAuthor room == (AccountKey . RoomUUID $ userId userClaims) || isRoot userClaims
+          if roomAuthor room == (AccountKey . RowUUID $ userId userClaims) || isRoot userClaims
               then pure room
               else do
                   status status403
@@ -304,7 +304,7 @@ mustBeRoomAuthorOrRoot roomUuid userClaims = do
 -- FIXME: belongs in JsonRequests
 -- | Handles getting a room  (from request) if we are the author (or root) according to the generic
 -- room request, or an error is provided.
-mustBeRoomAuthorOrRoot' :: ActionT Middle.Error ConfigM (RoomUUID, Room)
+mustBeRoomAuthorOrRoot' :: ActionT Middle.Error ConfigM (RowUUID, Room)
 mustBeRoomAuthorOrRoot' = do
     i <- param "id"
     (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
@@ -331,7 +331,7 @@ putRoomA = do
 -- | Delete a room by the specified room UUID and all of its portals.
 deleteRoomA :: Action
 deleteRoomA = do
-  (i :: RoomUUID) <- param "id"
+  (i :: RowUUID) <- param "id"
   (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   _ <- mustBeRoomAuthorOrRoot i userClaims
 
@@ -343,8 +343,8 @@ deleteRoomA = do
 
 getRoomsPortalsA :: Action
 getRoomsPortalsA = do
-  -- can fix this by importing and creating an instance of import Web.Scotty.Action (Parsable) for RoomUUID
-  (i :: RoomUUID) <- param "id"
+  -- can fix this by importing and creating an instance of import Web.Scotty.Action (Parsable) for RowUUID
+  (i :: RowUUID) <- param "id"
   --m <- runDB (DB.getBy (UniqueRoomID i))
   --m <- runDB (DB.get (toKey i))
   m <- Middle.runDB (DB.selectList [PortalBelongsTo DB.==. RoomKey i] [])

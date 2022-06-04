@@ -69,7 +69,7 @@ verifyPassword theGlobalPepper usersCorrectHash usersSalt attemptedPassword =
     CryptoFailed _ -> False
 
 
--- FIXME: UUID should be RoomUUID (which needs to be renamed also...)
+-- FIXME: UUID should be RowUUID (which needs to be renamed also...)
 data UserClaims = UserClaims { userId :: UUID
                              , userName :: Text
                              , isRoot :: Bool

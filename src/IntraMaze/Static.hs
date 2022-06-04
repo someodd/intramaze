@@ -13,7 +13,7 @@ import Data.List (intercalate)
 import Data.HashMap.Strict ( fromList )
 import Data.Text (unpack, pack)
 import qualified Text.Mustache.Types as M (Value(..))
-import IntraMaze.Models (RoomUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
+import IntraMaze.Models (RowUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
 import qualified Data.ByteString.Lazy as BSL (writeFile, ByteString)
 import System.FilePath (joinPath, (</>), takeDirectory)
 import System.Directory (createDirectoryIfMissing, copyFile, doesDirectoryExist)
@@ -81,15 +81,15 @@ searchSpace = [mustacheTemplatesPath, mustacheBuildThesePath]
 -- FIXME: I feel like this could be way more elegant! huge overlap with RoomObject. can't i use generic here or something?
 -- FIXME: rename to RoomPartial?
 -- FIXME: could share the same list function almost with slight tweaking
-newtype RoomMustache = RoomMustache (RoomUUID, Room) deriving (Generic)
+newtype RoomMustache = RoomMustache (RowUUID, Room) deriving (Generic)
 instance ToMustache RoomMustache where
-  toMustache (RoomMustache (roomUuid, room)) =
+  toMustache (RoomMustache (rowUuid, room)) =
     M.Object . HashMap.fromList $
       [ ("imagePath" :: T.Text, maybe M.Null M.String (roomBgFileName room))
       , ("description", maybe M.Null M.String (roomDescription room))
       -- FIXME/TODO: should it perhaps be M.Null instead of bool?
       , ("title", maybe M.Null M.String (roomTitle room))
-      , ("id", M.String . pack . show $ roomUuid)
+      , ("id", M.String . pack . show $ rowUuid)
       ]
 
 
@@ -97,7 +97,7 @@ instance ToMustache RoomMustache where
 -- FIXME: why use this over Room? Just because of the ID? oh and the rooms... associated...
 -- | Object for Mustache templates.
 data RoomObject = RoomObject
-  { roomObjId :: RoomUUID
+  { roomObjId :: RowUUID
   , roomObjPortals :: [Portal]
   , roomObjTitle :: Maybe T.Text
   , roomObjDescription :: Maybe T.Text
@@ -181,12 +181,12 @@ staticCopy = do
 -- The third argument (`String`) is the file name (not path).
 --
 -- Gives back the file path to the created image.
-createRoomImage :: RoomUUID -> BSL.ByteString -> String -> IO FilePath
-createRoomImage roomUUID fileContent fileName = do
+createRoomImage :: RowUUID -> BSL.ByteString -> String -> IO FilePath
+createRoomImage rowUuid fileContent fileName = do
   -- First write to the fs database (for room images)
   let
     -- The directory for this room in the filesystem database of images.
-    roomImageDbDirectory = roomImagesPath </> show roomUUID
+    roomImageDbDirectory = roomImagesPath </> show rowUuid
     -- The path (including filename) the image will be written to in the
     -- fs database.
     roomImageDbFilePath = roomImageDbDirectory </> fileName
@@ -197,7 +197,7 @@ createRoomImage roomUUID fileContent fileName = do
   let
     -- The directory this room gets built to, and where the image will
     -- get copied to from the database.
-    roomDirectory = joinPath [buildPath, "rooms", show roomUUID]
+    roomDirectory = joinPath [buildPath, "rooms", show rowUuid]
     -- The path (including filename) the image will be copied to
     -- for the building process and in built.
     builtFilePath = roomDirectory </> fileName
@@ -210,7 +210,7 @@ createRoomImage roomUUID fileContent fileName = do
 -- | Create the static file and directory and everything for a provided room.
 --
 -- Gives back a relative path to the new room's index inside the directory root for `buildPath`.
-createNewRoom :: RoomUUID -> Room -> [Portal] -> IO FilePath
+createNewRoom :: RowUUID -> Room -> [Portal] -> IO FilePath
 createNewRoom uuid room portals = do
   let
     -- FIXME: this is terrible needs to be updated!
@@ -223,9 +223,9 @@ createNewRoom uuid room portals = do
       , roomObjDescription = roomDescription room
       , roomObjImagePath = roomBgFileName room
       }
-    roomUuid = show uuid
+    rowUuid = show uuid
     -- This is sloppy FIXME
-    relativeRoomDirectoryPath = joinPath ["rooms", roomUuid]
+    relativeRoomDirectoryPath = joinPath ["rooms", rowUuid]
     roomDirectory = joinPath [buildPath, relativeRoomDirectoryPath]
     roomIndexFilePath = joinPath [roomDirectory, "index.html"]
     substitutions = [("room", toMustache roomObj)] -- FIXME: feels sloppy?
@@ -283,7 +283,7 @@ buildProfile (account, rooms) = do
 
 -- FIXME: should maybe be in DB?
 getUserRooms
-  :: RoomUUID
+  :: RowUUID
   -> ActionT Middle.Error ConfigM [RoomMustache]
 getUserRooms userId = do
   (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
@@ -296,11 +296,11 @@ getUserRooms userId = do
     pure . RoomMustache $ (uuid, room)
 
   -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
-  matchText :: PersistValue -> ActionT Middle.Error ConfigM RoomUUID
+  matchText :: PersistValue -> ActionT Middle.Error ConfigM RowUUID
   matchText (PersistLiteral_ Escaped t) = do
     case UUID.fromString $ BSU.toString t of
       Nothing -> Middle.jsonError $ Middle.ApiError 500 "Author UUID somehow failed to be parsed as a UUID!"
-      Just uuid -> pure . RoomUUID $ uuid
+      Just uuid -> pure . RowUUID $ uuid
   matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
 
 
@@ -316,7 +316,7 @@ buildProfilePages = do
   pure generatedProfilePaths
  where
   -- also shouldn't this belong to buildProfile or something?
-  accountEntityToUuid :: DB.Entity Account -> Either String (RoomUUID, Account)
+  accountEntityToUuid :: DB.Entity Account -> Either String (RowUUID, Account)
   accountEntityToUuid accountEntity = do
     let (DB.Entity accountId account) = accountEntity
     authorId <- case keyToValues accountId of
@@ -324,7 +324,7 @@ buildProfilePages = do
       pv -> Left $ show pv  ++ " was not of expected type when looking for author UUID"
     case UUID.fromString $ BSU.toString authorId of
       Nothing -> Left "Author UUID somehow failed to be parsed as a UUID!"
-      Just uuid -> Right (RoomUUID uuid, account)
+      Just uuid -> Right (RowUUID uuid, account)
   
   getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(Account, [RoomMustache])]
   getUsernameSlugPairs = do
@@ -337,7 +337,7 @@ buildProfilePages = do
       [] -> pure []
 
   -- FIXME: why does this even exist?!
-  -- TODO/FIXME: last value needs to be a RoomUUID
+  -- TODO/FIXME: last value needs to be a RowUUID
   -- FIXME: needs to be renamed and documented better and refectored/changed
   createTriplet :: DB.Entity Account -> ActionT Middle.Error ConfigM (Account, [RoomMustache])
   createTriplet accountEntity = do

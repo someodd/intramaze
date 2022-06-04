@@ -13,17 +13,17 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 
 import qualified Network.WebSockets as WS
-import IntraMaze.Models (RoomUUID (RoomUUID))
+import IntraMaze.Models (RowUUID (RowUUID))
 import qualified Data.UUID as UUID
 import Data.Maybe (isJust)
 --import IntraMaze.Middle
 --import qualified Database.Persist as DB
 
 
--- FIXME: just make RoomUUID a Text and make a type RoomUuidText = Text. it's just cleaner that way!
+-- FIXME: just make RowUUID a Text and make a type RoomUuidText = Text. it's just cleaner that way!
 -- then you can just make the fromString uuid thingy one of the verification steps.
 -- | Represent a client by their username, which room they are in, and a websocket connection.
-type Client = (Text, RoomUUID, WS.Connection)
+type Client = (Text, RowUUID, WS.Connection)
 
 
 -- TODO/FIXME: should maybe be a map, mapping room id to client. could use redis or something in future.
@@ -39,8 +39,8 @@ username (t, _, _) = t
 
 
 -- | Utility function which gets a Client's room.
-client'sRoom :: Client -> RoomUUID
-client'sRoom (_, roomUuid, _) = roomUuid
+client'sRoom :: Client -> RowUUID
+client'sRoom (_, rowUuid, _) = rowUuid
 
 
 -- | Create a new, initial state.
@@ -69,16 +69,16 @@ removeClient client = filter ((/= username client) . username)
 
 
 -- | Remove clients not in specified room.
-removeNotInRoom :: RoomUUID -> ServerState -> ServerState
-removeNotInRoom roomUuid = filter ((== roomUuid) . client'sRoom)
+removeNotInRoom :: RowUUID -> ServerState -> ServerState
+removeNotInRoom rowUuid = filter ((== rowUuid) . client'sRoom)
 
 
 -- NOTE: could be abstracted to just updateClient which replaces the existing client with a new one?
 -- | Update the room the client is in.
-updateClientRoom :: RoomUUID -> Client -> ServerState -> ServerState
-updateClientRoom roomUuid client serverState =
+updateClientRoom :: RowUUID -> Client -> ServerState -> ServerState
+updateClientRoom rowUuid client serverState =
     let (user, _, connection) = client
-        newClient = (user, roomUuid, connection)
+        newClient = (user, rowUuid, connection)
     in addClient newClient $ removeClient client serverState
 
 
@@ -90,10 +90,10 @@ broadcast message clients = do
     forM_ clients $ \(_, _, conn) -> WS.sendTextData conn message
 
 
-roomBroadcast :: RoomUUID -> Text -> ServerState -> IO ()
-roomBroadcast roomUuid message clients = do
+roomBroadcast :: RowUUID -> Text -> ServerState -> IO ()
+roomBroadcast rowUuid message clients = do
     T.putStrLn message
-    forM_ (removeNotInRoom roomUuid clients) $ \(_, _, conn) -> WS.sendTextData conn message
+    forM_ (removeNotInRoom rowUuid clients) $ \(_, _, conn) -> WS.sendTextData conn message
 
 
 {-
@@ -110,7 +110,7 @@ main = do
 -- | Create a preliminary Client from the first message (no validation) or fail.
 parseFirstMessageOrFail :: Text -> WS.Connection -> ServerState -> Either Text Client
 parseFirstMessageOrFail msg conn clients = do
-    client <- case getAnnounceRoomUUID msg >>= \uuid -> Just (getAnnounceName msg, uuid, conn) of
+    client <- case getAnnounceRowUUID msg >>= \uuid -> Just (getAnnounceName msg, uuid, conn) of
         Just client -> Right client
         Nothing -> Left "Invalid room UUID!"
     -- FIXME: intro message needs to also specify which room you're in? also how to update which room in?
@@ -134,12 +134,12 @@ parseFirstMessageOrFail msg conn clients = do
     isAnnounceCorrect s = T.take 14 (T.take 7 s <> T.drop 43 s) == "Hello, ! I am "
     getAnnounceName = T.drop 50
     getAnnounceRoom = T.take 36 . T.drop 7
-    getAnnounceRoomUUID s = RoomUUID <$> (UUID.fromString . T.unpack . getAnnounceRoom) s
+    getAnnounceRowUUID s = RowUUID <$> (UUID.fromString . T.unpack . getAnnounceRoom) s
     isValidUuid = isJust . UUID.fromString
 
     {- FIXME: implementing this currently would be very difficult because of the monad tranformer stuff related to db... save for later!
     will need to make my own readert and run it?
-    roomExists :: RoomUUID -> IO ConfigM Bool
+    roomExists :: RowUUID -> IO ConfigM Bool
     roomExists i = do
         m <- runDB (DB.get (RoomKey i))
         case m of
@@ -196,8 +196,8 @@ application state pending = do
 -- | The talk function continues to read messages from a single client until he
 -- disconnects. All messages are broadcasted to the other clients.
 talk :: Client -> MVar ServerState -> IO ()
-talk (user, roomUuid, conn) state = forever $ do
+talk (user, rowUuid, conn) state = forever $ do
     msg <- WS.receiveData conn
     readMVar state >>= roomBroadcast
-        roomUuid
+        rowUuid
         (user `mappend` ": " `mappend` msg)

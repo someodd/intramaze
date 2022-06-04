@@ -86,37 +86,37 @@ instance PersistField Polygon where
   fromPersistValue persistValue = Left . T.pack $ "Invalid Polygon:" ++ show persistValue
 
 
-instance Show RoomUUID where
-  show (RoomUUID a) = show a
+instance Show RowUUID where
+  show (RowUUID a) = show a
 
 
-newtype RoomUUID = RoomUUID UUID.UUID deriving (Generic, Eq, Ord, Read, ToHttpApiData, FromHttpApiData)
-instance PathPiece RoomUUID where
-  fromPathPiece text = RoomUUID <$> UUID.fromString (T.unpack text)
-  toPathPiece (RoomUUID uuid) = T.pack $ UUID.toString uuid
+newtype RowUUID = RowUUID UUID.UUID deriving (Generic, Eq, Ord, Read, ToHttpApiData, FromHttpApiData)
+instance PathPiece RowUUID where
+  fromPathPiece text = RowUUID <$> UUID.fromString (T.unpack text)
+  toPathPiece (RowUUID uuid) = T.pack $ UUID.toString uuid
 
 -- | This makes it so we can use `param` and parse it immediately as a RoomID.
-instance Parsable RoomUUID where
+instance Parsable RowUUID where
   -- text -> either text a
   parseParam text =
     case UUID.fromString (TL.unpack text) of
-      Just uuid -> Right . RoomUUID $ uuid
+      Just uuid -> Right . RowUUID $ uuid
       Nothing -> Left $ "Invalid UUID: " <> text
 
 -- these are working via some kind of generic magic... should learn about that
-instance ToJSON RoomUUID where
+instance ToJSON RowUUID where
   toEncoding = genericToEncoding defaultOptions
-instance FromJSON RoomUUID where
+instance FromJSON RowUUID where
   -- nothing!
 
 -- TODO: needs to have a Polygon type too
-instance PersistFieldSql RoomUUID where
+instance PersistFieldSql RowUUID where
   -- PostgreSQL supports "uuid" as a column type.
   sqlType _ = SqlOther "uuid"
 
 
-instance PersistField RoomUUID where
-  toPersistValue (RoomUUID uuid) =
+instance PersistField RowUUID where
+  toPersistValue (RowUUID uuid) =
     -- NOTE: do we want to use DbSpecifc here instead
     -- because of JSON? "The DbSpecific constructor
     -- corresponds to the legacy PersistDbSpecific
@@ -127,7 +127,7 @@ instance PersistField RoomUUID where
     PersistLiteral_ Escaped . BSU.fromString $ UUID.toString uuid
   fromPersistValue (PersistLiteral_ _ byteString) =
     case UUID.fromString (BSU.toString byteString) of
-      Just uuid -> Right . RoomUUID $ uuid
+      Just uuid -> Right . RowUUID $ uuid
       Nothing -> Left . T.pack $ "Invalid UUID: " <> BSU.toString byteString
   fromPersistValue persistValue = Left . T.pack $ "Invalid UUID:" ++ show persistValue
 
@@ -159,7 +159,7 @@ User json
 -- should i use actual integer ids or room uuids
 share [mkMigrate "migrateAll", mkPersist sqlSettings] [persistLowerCase|
 Account json
-  Id RoomUUID default=gen_random_uuid()
+  Id RowUUID default=gen_random_uuid()
   username Text
   password Text
   root Bool default=False
@@ -172,7 +172,7 @@ Portal json
   deriving Show
 
 Room json
-  Id RoomUUID default=gen_random_uuid()
+  Id RowUUID default=gen_random_uuid()
   title Text Maybe
   description Text Maybe
   bgFileName Text Maybe
