@@ -141,6 +141,7 @@ async function getRoom (uuid) {
 }
 
 
+// FIXME: postUser?
 /**
  * Authentication request (JSON Web Token).
  * 
@@ -152,7 +153,8 @@ async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */
     const response = await restApiRequest('users/login', 'POST', {username: username, password: password})
     console.log(response);
-    return response;
+    // FIXME: what if fail?
+    return response.successContent;
 }
 
 

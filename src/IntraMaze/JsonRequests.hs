@@ -21,7 +21,7 @@ import qualified Data.Text.Lazy.Encoding as TLE ( encodeUtf8 )
 
 import qualified IntraMaze.JWT as JWT (UserClaims(..), decodeAndValidateFull)
 import qualified IntraMaze.Models as Models (Room(..), EntityField(..))
-import qualified IntraMaze.Middle as Middle (Error, ApiError(..), jsonError)
+import qualified IntraMaze.Middle as Middle (ApiError(..), jsonResponse, ErrorName (AuthenticationFailure))
 import IntraMaze.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import qualified Database.Persist as DB
@@ -58,12 +58,12 @@ data GenericRoomRequestValidated = GenericRoomRequestValidated
 class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
     -- NOTE: I could have just done `Either String b`, to make it so the status code can be decided later.
     -- | Turn an unvalidated request into a validated one (or error)
-    validateRequest :: a -> ActionT Middle.Error ConfigM (Either Middle.ApiError b)
+    validateRequest :: a -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError b)
 
     -- FIXME: needs a better name.
     -- | Fail with the passed error on invalid JSON (namely due to token failure, generally,
     -- but can be other errors).
-    apiErrorLeft :: ActionT Middle.Error ConfigM b
+    apiErrorLeft :: ActionT Middle.ApiError ConfigM b
     apiErrorLeft = do
         -- FIXME: this will error if no JSON (why should it if the model is blank!? some requests don't require json)
         t <- jsonData
@@ -97,40 +97,40 @@ instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated wher
 -- FIXME: four functions that could be maybe combined?
 
 
-getUnvalidatedToken :: ActionT Middle.Error ConfigM (Either Middle.ApiError Token)
+getUnvalidatedToken :: ActionT Middle.ApiError ConfigM (Either Middle.ApiError Token)
 getUnvalidatedToken = do
     token <- header "Authorization"
     case token of
-      Nothing -> pure . Left $ Middle.ApiError 401 "Missing authorization header."
+      Nothing -> pure . Left $ Middle.ApiError 401 Middle.AuthenticationFailure "Missing authorization header."
       Just txt -> pure $ Right . Token . BL.toStrict . TLE.encodeUtf8 $ txt
 
 
 -- | Read the JWT from the request, ensure that it's valid or produce an HTTP `Error`,
 -- otherwise return the `UserClaims` corresponding to the token found in the request.
-getUserClaimsOrFail :: ActionT Middle.Error ConfigM UserClaims
+getUserClaimsOrFail :: ActionT Middle.ApiError ConfigM UserClaims
 getUserClaimsOrFail = getUnvalidatedToken >>= failLeft >>= getUserClaims
 
 
-getUserClaims' :: Token -> ActionT Middle.Error ConfigM (Either Middle.ApiError JWT.UserClaims)
+getUserClaims' :: Token -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError JWT.UserClaims)
 getUserClaims' (Token token) = do
     unvalidatedToken <- liftIO $ JWT.decodeAndValidateFull $ pure token
     case unvalidatedToken of
       Left errorString -> do
-          pure . Left $ Middle.ApiError 401 errorString
+          pure . Left $ Middle.ApiError 401 Middle.AuthenticationFailure errorString
       Right uc -> pure . Right $ uc
 
 
 -- FIXME: this could be abstracted to Either so both the instance and
 -- this could use it... use either boilerplate
 -- FIXME: does this perhaps belong in JWT instead?
-getUserClaims :: Token -> ActionT Middle.Error ConfigM JWT.UserClaims
+getUserClaims :: Token -> ActionT Middle.ApiError ConfigM JWT.UserClaims
 getUserClaims token = getUserClaims' token >>= failLeft
 
 
 -- FIXME: i'd like to use Status as argument here. but maybe Left should be
 -- (String, Status)? And ApiError should also take the status into account?
-failLeft :: Either Middle.ApiError a -> ActionT Middle.Error ConfigM a
-failLeft = either Middle.jsonError pure
+failLeft :: Either Middle.ApiError a -> ActionT Middle.ApiError ConfigM a
+failLeft = either Middle.jsonResponse pure
 
 
 instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValidated where

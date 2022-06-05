@@ -184,7 +184,7 @@ getPort' = do
   return p
 
 
-application :: Config -> ScottyT Middle.Error ConfigM ()
+application :: Config -> ScottyT Middle.ApiError ConfigM ()
 application c = do
   let e = environment c
   middleware (loggingM e)
@@ -231,7 +231,7 @@ loggingM Test = id
 
 
 -- | Something something!
-defaultH :: Environment -> Middle.Error -> Actions.Action
+defaultH :: Environment -> Middle.ApiError -> Actions.Action
 defaultH e x = do
   status internalServerError500
   let o = case e of

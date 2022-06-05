@@ -2,6 +2,8 @@
 parent: base.html
 title: Register New Account
 ---
+
+<div id="register-account">
 <p>Create a new {{siteTitle}} account.</p>
 
 <form id="login-form" action="javascript: void(0)">
@@ -13,18 +15,22 @@ title: Register New Account
 </form>
 
 <p>Already have an account? <a href="/login.html">Log in to your account now.</a></p>
-
+</div>
 
 <script src="/rest.js"></script>
 <script src="/auth.js"></script>
 
 <script defer async>
 
+    const box = document.getElementById("register-account")
+    swapInsideAuthenticated(box, "You are already logged in!", null)
+
+
     testAuth();
     document.getElementById('login-form').addEventListener('submit', function () {
             var username = document.getElementById('username').value;
             var password = document.getElementById('password').value;
-            register(username, password);
+            registerRedirect(username, password);
     });
 
 

@@ -71,6 +71,7 @@ library
         transformers,
         aeson,
         data-default,
+        exceptions,
         wai,
         mustache,
         containers,
@@ -85,7 +86,9 @@ library
         wai-extra,
         heroku,
         scotty,
+        slug,
         persistent-postgresql,
+        postgresql-simple,
         frontmatter,
         http-types
         , jose-jwt
@@ -104,4 +107,6 @@ library
         IntraMaze.JsonRequests
         IntraMaze.Actions
         IntraMaze.Config
+        IntraMaze.ActionHelpers
+        IntraMaze.Database
         Template

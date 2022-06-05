@@ -34,6 +34,7 @@ import qualified Data.UUID as UUID
 import Database.Persist (keyToValues, LiteralType (Escaped))
 import Database.Persist.PersistValue (PersistValue(..))
 import qualified Data.ByteString.UTF8 as BSU
+import IntraMaze.Database (accountEntityToUuid)
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -284,7 +285,7 @@ buildProfile (account, rooms) = do
 -- FIXME: should maybe be in DB?
 getUserRooms
   :: RowUUID
-  -> ActionT Middle.Error ConfigM [RoomMustache]
+  -> ActionT Middle.ApiError ConfigM [RoomMustache]
 getUserRooms userId = do
   (rooms :: [DB.Entity Room]) <- Middle.runDB $ DB.selectList [RoomAuthor DB.==. AccountKey userId] []
   case rooms of
@@ -296,37 +297,26 @@ getUserRooms userId = do
     pure . RoomMustache $ (uuid, room)
 
   -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
-  matchText :: PersistValue -> ActionT Middle.Error ConfigM RowUUID
+  matchText :: PersistValue -> ActionT Middle.ApiError ConfigM RowUUID
   matchText (PersistLiteral_ Escaped t) = do
     case UUID.fromString $ BSU.toString t of
-      Nothing -> Middle.jsonError $ Middle.ApiError 500 "Author UUID somehow failed to be parsed as a UUID!"
+      Nothing -> Middle.jsonResponse $ Middle.ApiError 500 Middle.UuidParseFailure "Author UUID somehow failed to be parsed as a UUID!"
       Just uuid -> pure . RowUUID $ uuid
-  matchText e = Middle.jsonError $ Middle.ApiError 500 $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
+  matchText e = Middle.jsonResponse $ Middle.ApiError 500 Middle.ResourceNotFound $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
 
 
 -- FIXME: this is SO messy!
 -- FIXME: this is weird because it's the only one that hits the database...
 -- refactor? should it not even get usernames? The output type is weird.
 -- | Build author profile pages.
-buildProfilePages :: ActionT Middle.Error ConfigM [FilePath]
+buildProfilePages :: ActionT Middle.ApiError ConfigM [FilePath]
 buildProfilePages = do
   _ <- liftIO $ createDirectoryIfMissing True usersDirectory
   usernameSlugPairs <- getUsernameSlugPairs
   (generatedProfilePaths :: [FilePath]) <- liftIO $ traverse buildProfile usernameSlugPairs
   pure generatedProfilePaths
  where
-  -- also shouldn't this belong to buildProfile or something?
-  accountEntityToUuid :: DB.Entity Account -> Either String (RowUUID, Account)
-  accountEntityToUuid accountEntity = do
-    let (DB.Entity accountId account) = accountEntity
-    authorId <- case keyToValues accountId of
-      [PersistLiteral_ Escaped authorId'] -> Right authorId'
-      pv -> Left $ show pv  ++ " was not of expected type when looking for author UUID"
-    case UUID.fromString $ BSU.toString authorId of
-      Nothing -> Left "Author UUID somehow failed to be parsed as a UUID!"
-      Just uuid -> Right (RowUUID uuid, account)
-  
-  getUsernameSlugPairs :: ActionT Middle.Error ConfigM [(Account, [RoomMustache])]
+  getUsernameSlugPairs :: ActionT Middle.ApiError ConfigM [(Account, [RoomMustache])]
   getUsernameSlugPairs = do
     -- FIXME/NOTE: how to only select username?
     (accounts :: [DB.Entity Account]) <- Middle.runDB (DB.selectList [] [])
@@ -339,12 +329,12 @@ buildProfilePages = do
   -- FIXME: why does this even exist?!
   -- TODO/FIXME: last value needs to be a RowUUID
   -- FIXME: needs to be renamed and documented better and refectored/changed
-  createTriplet :: DB.Entity Account -> ActionT Middle.Error ConfigM (Account, [RoomMustache])
+  createTriplet :: DB.Entity Account -> ActionT Middle.ApiError ConfigM (Account, [RoomMustache])
   createTriplet accountEntity = do
     -- FIXME/NOTE: I hate this. This is so ugly. Is this really the best Persist can do for giving me
     -- the value of the id pertaining to the database entity?
     case accountEntityToUuid accountEntity of
-      Left errorString -> Middle.jsonError $ Middle.ApiError 500 errorString 
+      Left (errorName, errorString) -> Middle.jsonResponse $ Middle.ApiError 500 errorName errorString 
       Right (authorUuid, account) -> do
         rooms <- getUserRooms authorUuid
         pure (account, rooms)

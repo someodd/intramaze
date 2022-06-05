@@ -10,21 +10,20 @@ module IntraMaze.Actions where
 import Data.Aeson ( FromJSON(..), Value(Null) )
 import GHC.Generics ( Generic )
 import Data.ByteString.UTF8 as BS (toString)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Trans.Class (MonadTrans)
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.Text as T
-import Data.Text.Lazy (Text)
+import Data.Text.Lazy (Text, toStrict)
 import qualified Database.Persist as DB
 import qualified Database.Persist.Postgresql as DB
-import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RowUUID (..), EntityField(..), PortalId, Account (..))
+import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RowUUID (..), EntityField(..), PortalId, Account (..), Unique (..))
 import qualified Data.UUID as UUID
 import Network.HTTP.Types.Status (created201,
     notFound404, status204, status404, status403)
 import Network.Wai.Parse (FileInfo(..))
 import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
-import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile)
-import Database.Persist (Entity (entityVal), Filter (Filter), FilterValue (..))
+import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
+import Database.Persist (Entity, Filter (Filter), FilterValue (..), getBy)
 import qualified IntraMaze.Middle as Middle
 import qualified Data.Text.Lazy as TL
 import qualified IntraMaze.JWT as JWT (makeToken, UserClaims (userId))
@@ -32,9 +31,12 @@ import Data.Text.Encoding as TSE ( decodeUtf8 )
 import IntraMaze.JWT (UserClaims (..))
 import qualified IntraMaze.JsonRequests as JsonRequests
 import IntraMaze.Config ( ConfigM )
+import IntraMaze.Database (accountEntityToUuid')
+import IntraMaze.ActionHelpers
+import Database.PostgreSQL.Simple.Errors (ConstraintViolation(UniqueViolation))
 
 
-type Action = ActionT Middle.Error ConfigM ()
+type Action = ActionT Middle.ApiError ConfigM ()
 
 
 -- belongs in json requests FIXME?
@@ -53,17 +55,42 @@ getWhoamiA = do
     json uc
 
 
--- | Create a new user.
-postUserA :: Action
+{- | Create (register) a new user and create their profile page.
+
+If there isn't a problem, a JSON response is generated including the
+user's UUID and the file path to their newly created profile page.
+-}
+postUserA :: ActionT Middle.ApiError ConfigM ()
 postUserA = do
-  (t :: UsernamePassword) <- jsonData -- need to get username and password from this
-  _ <- Middle.runDB (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
-  status created201
-  -- FIXME: should give back json of the uuid?
-  json (1 :: Int)
+  -- Although it would be interesting to do a value check as a constraint in PostgreSQL,
+  -- check the validity of the username here. We simply sanitize through the slug.
+  (t :: UsernamePassword) <- jsonData
+  _ <- usernameValidator $ TL.toStrict $ username t
+  -- FIXME: this can raise an error SqlError and it won't be caught/transformed into a scotty error!
+  _ <- Middle.runDbWithCatcher catcher (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
+  -- Now we need to query the database just to get the new user's uuid.
+  maybeAccount :: Maybe (Entity Account) <- Middle.runDB $ getBy . UniqueUsername $ toStrict $ username t  
+  rowUuid <- maybe
+    (Middle.jsonResponse $ Middle.ApiError 500 Middle.ResourceNotFound "Successfully created the user account, yet cannot find it by the username provided. The profile page cannot be created and there will likely be other errors associated with this account.")
+    accountEntityToUuid'
+    maybeAccount
+  -- Now attempt to create a profile page for the user created in the database
+  filePath <- createUserProfile rowUuid
 
+  Middle.jsonResponse $ Middle.ApiSuccess 201 (rowUuid, filePath)
 
--- FIXME: more elegant status on fail. use ApiError or that higher level one...
+ where
+  -- In case the user attempts to create an account with a username which already exists.
+  catcher e (UniqueViolation "unique_username") = pure $ Left $ Middle.ApiError 400 Middle.UsernameUnavailable $ "The provided username is already taken. More details: " ++ show e
+  catcher e t = Middle.catcher e t
+
+  usernameValidator username' = do
+    eitherExceptionOrSlug <- liftIO $ Middle.usernameSlug username'
+    case eitherExceptionOrSlug of
+      Left slugException -> Middle.jsonResponse $ Middle.ApiError 400 Middle.UsernameInvalid $ "The username you're trying to create is invalid: " ++ show slugException
+      Right sl -> pure sl
+
+-- FIXME: should this actually be a get request? to get the token? getUserToken?
 -- | Log in, creating/return a JWT, or an error.
 postUserLoginA :: Action
 postUserLoginA = do
@@ -71,18 +98,17 @@ postUserLoginA = do
   (accountEntities :: [DB.Entity Account]) <- Middle.runDB (DB.rawSql "SELECT ?? FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
   case accountEntities of
     (DB.Entity accountId account):_ -> do
-      status created201
-      --json $ makeToken $ (username t) (show . head $ userIds)
       case UUID.fromString . show $ unAccountKey accountId of
         (Just userUuid :: Maybe UUID.UUID) -> do
-          token <- liftIO $ JWT.makeToken userUuid (TL.toStrict $ username t) (accountRoot account) -- FIXME XXX
-          json $ TSE.decodeUtf8 token
-        Nothing -> json ("failed to parse UUID from DB to a UUID type during JWT process" :: Text)
+          token <- liftIO $ JWT.makeToken userUuid (TL.toStrict $ username t) (accountRoot account)
+          Middle.jsonResponse $ Middle.ApiSuccess 200 (TSE.decodeUtf8 token)
+        Nothing ->
+          Middle.jsonResponse $ Middle.ApiError 500 Middle.UuidParseFailure "failed to parse UUID from DB to a UUID type during JWT process"
     [] -> do
-      status created201
-      json ("failed" :: Text)
+      Middle.jsonResponse $ Middle.ApiError 403 Middle.AuthenticationFailure "Credentials provided are incorrect."
 
 
+-- FIXME: static UUID is bad! change this or delete.
 -- FIXME: didn't you make a function that can accept a boolean function for inspecting user claims?
 postTestRequire :: Action
 postTestRequire = do
@@ -116,28 +142,6 @@ postRoomsA = do
   json (filePath, uuid)
 
 
--- FIXME: where to put this instead?
--- FIXME: messy because you're not used to dealing with transformers and monads this much
--- | Static generation of a room based off the RowUUID.
---
--- The return value is "Maybe FilePath" instead of simply "FilePath," because
--- no room by the supplied `uuid` may exist!
---
--- Helper function.
-generateRoom
-  :: (MonadTrans t, MonadIO (t ConfigM))
-  => RowUUID
-  -> t ConfigM (Maybe FilePath)
-generateRoom uuid = do
-  roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
-  portals <- Middle.runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
-  case roomMaybe >>= \room -> Just $ createNewRoom uuid room [entityVal portal | portal <- portals] of
-    Nothing -> pure Nothing
-    Just roomPath -> do
-      path <- liftIO roomPath
-      pure $ Just path
-
-
 -- FIXME: only needs user to regenerate
 -- FIXME: POST instead?
 -- | REST endpoint for calling for the static HTML file of a room.
@@ -154,16 +158,16 @@ getRoomGenerateA = do
 
 
 -- FIXME: should produce error if no room author
-getRoomAuthor :: RowUUID -> ActionT Middle.Error ConfigM (Either Middle.ApiError AccountId)
+getRoomAuthor :: RowUUID -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError AccountId)
 getRoomAuthor rowUuid = do
   m <- Middle.runDB (DB.get (RoomKey rowUuid))
   case m of
-    Nothing -> pure . Left $ Middle.ApiError 404 "not found"
+    Nothing -> pure . Left $ Middle.ApiError 404 Middle.ResourceNotFound $ "Room by the ID " ++ show rowUuid ++ " cannot be found."
     Just t -> pure $ Right $ roomAuthor (t :: Room)
 
 
 -- | Error out if no room...
-getRoomAuthor' :: RowUUID -> ActionT Middle.Error ConfigM AccountId
+getRoomAuthor' :: RowUUID -> ActionT Middle.ApiError ConfigM AccountId
 getRoomAuthor' rowUuid = getRoomAuthor rowUuid >>= JsonRequests.failLeft
 
 
@@ -193,7 +197,7 @@ needRoot :: UserClaims -> String -> Action -> Action
 needRoot userClaims errorMessage action = do
   if isRoot userClaims
     then action
-    else Middle.jsonError $ Middle.ApiError 403 errorMessage
+    else Middle.jsonResponse $ Middle.ApiError 403 Middle.PermissionFailure errorMessage
 
 
 -- | Generate all the static profile pages for each user.
@@ -212,14 +216,8 @@ getGenerateSpecificProfile :: Action
 getGenerateSpecificProfile = do
   (i :: RowUUID) <- param "id"
   _ <- mustMatchUuidOrRoot i
-  rooms <- getUserRooms i
-  maybeAccount <- Middle.runDB (DB.get (AccountKey i))
-  case maybeAccount of
-    Nothing ->
-      Middle.jsonError $ Middle.ApiError 404 $ "Attempted to update the profile belonging to user of id " ++ show i ++ ", but no such user ID exists in database."
-    Just account -> do
-      filePath <- liftIO $ buildProfile (account, rooms)
-      json [filePath]
+  filePath <- createUserProfile i
+  json filePath
 
 
 -- FIXME: needs to use directory for room ID...
@@ -268,23 +266,28 @@ getRoomSearchA = do
   json (m :: [DB.Entity Room])
 
 
+-- FIXME: maybe the problem is in javascript
+-- FIXME: why do we need permissions for this?
+-- FIXME: i was having a hard time diagnosing what went wrong and it was because of mustmatchuuidorroot wasn't erroring out properly and i didn't get a good error to know what was wrong
+-- FIXME: THIS ISN'T WORKING RIGHT. IT ISN'T ERRORING OUT UPON FAILURE LIKE I THOUGHT IT WOULD?
 -- FIXME: should these permission type things get moved to JWT or permissions or something?
 -- FIXME: very similar to other must be author or root
 -- | Ensures that the specified UUID matches the JWT, or that the JWT authenticates
 -- the user as having root privileges.
-mustMatchUuidOrRoot :: RowUUID -> ActionT Middle.Error ConfigM ()
+mustMatchUuidOrRoot :: RowUUID -> ActionT Middle.ApiError ConfigM ()
 mustMatchUuidOrRoot rowUuid = do
     userClaims <- JsonRequests.getUserClaimsOrFail
     if RowUUID (userId userClaims) == rowUuid || isRoot userClaims
       then pure ()
       else do
+        _ <- error "wtf"
         status status403
-        json $ Middle.ApiError 403 "Must be the user of the profile attempting to update or root to perform this action."
+        json $ Middle.ApiError 403 Middle.PermissionFailure "Must be the user of the profile attempting to update or root to perform this action."
         finish
 
 
 -- FIXME: why duplicate?
-mustBeRoomAuthorOrRoot :: RowUUID -> UserClaims -> ActionT Middle.Error ConfigM Room
+mustBeRoomAuthorOrRoot :: RowUUID -> UserClaims -> ActionT Middle.ApiError ConfigM Room
 mustBeRoomAuthorOrRoot rowUuid userClaims = do
     m <- Middle.runDB $ DB.get (RoomKey rowUuid)
     case m of
@@ -297,14 +300,14 @@ mustBeRoomAuthorOrRoot rowUuid userClaims = do
               then pure room
               else do
                   status status403
-                  json $ Middle.ApiError 403 "Must be author or root to perform this action."
+                  json $ Middle.ApiError 403 Middle.PermissionFailure "Must be author or root to perform this action."
                   finish
 
 
 -- FIXME: belongs in JsonRequests
 -- | Handles getting a room  (from request) if we are the author (or root) according to the generic
 -- room request, or an error is provided.
-mustBeRoomAuthorOrRoot' :: ActionT Middle.Error ConfigM (RowUUID, Room)
+mustBeRoomAuthorOrRoot' :: ActionT Middle.ApiError ConfigM (RowUUID, Room)
 mustBeRoomAuthorOrRoot' = do
     i <- param "id"
     (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
@@ -395,20 +398,3 @@ patchRoomA = do
     -- now we can start manipulation
     Middle.runDB (DB.update (RoomKey i) $ roomUpdates)
     json Null
-
-
--- FIXME: does this belong in jsonrequests or jwt?
--- | Require some boolean property of the UserClaims.
-jwtRequire :: JsonRequests.Token  -> (UserClaims -> Bool) -> String -> ActionT Middle.Error ConfigM (Either String UserClaims)
-jwtRequire token jwtSucceedCondition failString = do
-  userClaims <- JsonRequests.getUserClaims token
-  if jwtSucceedCondition userClaims
-    then pure $ Right userClaims
-    else pure $ Left failString
-
-
--- FIXME: belongs somewhere else
--- NOTE: I don't understand the fromIntegral/Integer bit of this function. 
--- Doesn't it already know it's an integer, since that's in the function's signature?
-toKey :: DB.ToBackendKey DB.SqlBackend a => Integer -> DB.Key a
-toKey i = DB.toSqlKey (fromIntegral (i :: Integer))
