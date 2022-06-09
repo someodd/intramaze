@@ -1,0 +1,38 @@
+---
+parent: base.html
+title: Logout
+---
+
+<!--- this is a bad way of doing this. should fill content immediately. -->
+<div id="not-logged-in">
+    You are now logged out. Do you want to <a href="/login.html">login</a>?
+</div>
+
+<div id="logged-in">
+    <p>You are logged in, but this page should have logged you out... try refreshing?</p>
+</div>
+
+<script src="/rest.js"></script>
+<script src="/auth.js"></script>
+
+<script defer async>
+    logout()
+    toggleLoginContent()
+    testAuth();
+
+
+    /**
+     * Change what is displayed on the login page depending on if the user is
+     * already logged in (or not).
+     */
+    async function toggleLoginContent() {
+        const loggedUser = await getUser();
+        if (loggedUser) {
+            document.getElementById('not-logged-in').style.display = "none";
+            document.getElementById('logged-in').style.display = "block";
+        } else {
+            document.getElementById('not-logged-in').style.display = "block";
+            document.getElementById('logged-in').style.display = "none"; 
+        }
+    }
+</script>
