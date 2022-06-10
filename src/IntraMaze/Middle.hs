@@ -181,13 +181,5 @@ runDbWithCatcher catcher' q = do
 
 usernameSlug :: T.Text -> IO (Either SlugException Slug)
 usernameSlug username' = do
-  something <- try (parseSlug username' :: IO Slug)
-  pure $ validChecker' something
- where
-  validChecker' :: Either SlugException Slug -> Either SlugException Slug
-  validChecker' e =
-    case e of
-      Left (InvalidInput t) -> Left (InvalidInput t)
-      Left (InvalidSlug t) -> Left (InvalidSlug t)
-      Left (InvalidLength t) -> Left (InvalidLength t)
-      Right slug -> pure slug
+  (something :: Either SlugException Slug) <- try (parseSlug username' :: IO Slug)
+  pure something
