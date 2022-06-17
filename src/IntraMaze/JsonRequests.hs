@@ -99,6 +99,7 @@ instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated wher
 
 getUnvalidatedToken :: ActionT Middle.ApiError ConfigM (Either Middle.ApiError Token)
 getUnvalidatedToken = do
+    -- FIXME/TODO: needs to be "Authoirzation: Bearer <token>" -- check documentation on this...
     token <- header "Authorization"
     case token of
       Nothing -> pure . Left $ Middle.ApiError 401 Middle.AuthenticationFailure "Missing authorization header."

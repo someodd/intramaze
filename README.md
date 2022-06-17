@@ -27,6 +27,16 @@ Now you can visit http://localhost:8000/.
 sudo apt install libjwt zlib1g-dev postgresql postgresql-contrib libpq-dev libjwt-dev
 ```
 
+## Set up JWT signature keys
+
+You will also need to generate the private key for JSON Web Tokens:
+
+```
+openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
+openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
+
+```
+
 ### Setting up PostgreSQL
 
 ```
