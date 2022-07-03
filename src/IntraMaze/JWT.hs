@@ -43,6 +43,7 @@ For more info on JWT: <https://jwt.io/introduction>
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE NoMonomorphismRestriction #-} -- just for sweet and short examples
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
@@ -54,6 +55,7 @@ For more info on JWT: <https://jwt.io/introduction>
 
 module IntraMaze.JWT (decodeAndValidateFull, UserClaims(..), makeToken) where
 
+import Data.Data
 import           Web.Libjwt
 import           Control.Arrow                  ( left )
 import           Control.Exception              ( catch
@@ -71,6 +73,7 @@ import GHC.Generics ( Generic )
 
 import           Prelude                 hiding ( exp )
 import qualified Data.Aeson as A
+--import qualified Database.PostgreSQL.Simple as JWT
 
 
 -- | The key pair used for JWT signatures.
@@ -103,8 +106,25 @@ data UserClaims = UserClaims
   , isRoot :: Bool
   -- ^ Does this user have administrator privileges?
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock (Eq, Show, Data, Typeable, Generic)
   deriving (A.ToJSON)  -- TODO: this might be bad. only does this for whoami check. need to read more thoroughly into private and public claims etc.
+
+
+-- | Turns UserClaims into a payload for JWT, using generic programming.
+--
+-- >>> ...
+-- ..
+{-
+toPayload :: UserClaims -> [Claim *]
+toPayload userClaims =
+  let
+    x :: Constr = toConstr userClaims
+    y :: [String] = constrFields x
+    z :: [DataType] = dataTypeConstrs dataTypeOf $ userClaims
+    a = zip y z
+  in
+    map (\(b, c) -> b ->> c) a
+-}
 
 
 -- | This is used for decoding a JWT.
@@ -114,7 +134,7 @@ data UserClaims = UserClaims
 -- See: <https://hackage.haskell.org/package/libjwt-typed-0.2/docs/Libjwt-Payload.html>
 type MyJwt = Jwt
   '["userId" ->> UUID, "userName" ->> Text, "isRoot" ->> Bool]
-  -- ^ Payload
+  -- ^ Payload. I want to figure out a way to automatically generate this from UserClaims.
   'NoNs
   -- ^ Namespace
 
@@ -157,6 +177,7 @@ mkPayload
   -> Text
   -> Bool
   -- FIXME: nonempty
+  -- FIXME, BELOW: too expicit! defeats the purpose of generic programming above
   -> m (Payload '[ 'Grant "userId" UUID, 'Grant "userName" Text,
                    'Grant "isRoot" Bool]
         'NoNs)

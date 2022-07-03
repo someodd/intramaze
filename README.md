@@ -1,6 +1,14 @@
 # IntraMaze
 
+A maze made out of rooms users have made and arbitrarily linked together. Explore the maze, if you bump into the other users in the same room you can have an ephemeral conversation.
+
 I use Debian (unstable).
+
+## How does it work
+
+The website is a static website managed by daemon.
+
+The daemon is a REST API for managing the static website as well as managing the websocket connections for the chatting.
 
 ## Running
 
