@@ -11,7 +11,7 @@
  * The host used for all REST API requests.
  * @type {String}
  */
- const restApiHost = "http://localhost:3000/";
+ const restApiHost = "/api/";
 
 
 // FIXME: weirdly on the serverside if you request ..//room/whatever you'll get some kind of response? makes bugs confusing.

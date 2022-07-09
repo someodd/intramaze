@@ -1,0 +1,12 @@
+# Use to cache dependencies, basically, so rebuilding docker doesn't
+# take forever.
+FROM haskell:8.10
+
+WORKDIR /opt/example
+COPY . /opt/example
+
+RUN apt-get update
+RUN apt-get install -y zlib1g-dev libpq-dev libjwt-dev nginx
+
+RUN cabal update
+RUN cabal build

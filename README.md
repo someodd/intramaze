@@ -12,7 +12,65 @@ The website is a static website managed by daemon.
 
 The daemon is a REST API for managing the static website as well as managing the websocket connections for the chatting. REST API authentication is managed with JWT.
 
+### `static/`
+
+The `static/mustache-build` are literal pages to build (like copying + running through parser), whereas `static/mustache` is simply for templates that get used to build pages.
+
 ## Running
+
+You will need to generate the private key for JSON Web Tokens (regardless how you run):
+
+```
+openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
+openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
+
+```
+
+### Running with Docker
+
+Be sure to start by editing an env file like `.env.dev`:
+
+```
+POSTGRES_USER=testpguser
+POSTGRES_PASSWORD=testpguser
+
+SCOTTY_ENV=Test
+SCOTTY_SITE_TITLE=MazeQuest
+```
+
+This command will build all the dependencies as an image, so dependencies don't have to be built/installed/downloaded every time:
+
+```
+docker build -f Dockerfile-depends -t intramaze_depends .
+```
+
+This command will bring in new changes to the codebase and compile, then put up the PostgreSQL service, as well as the
+API+static service (using nginx as reverse proxy):
+
+```
+docker compose --env-file .env.dev up
+```
+
+Now you can visit the website using either:
+
+  * http://localhost:8080/new-room.html
+  * type in the docker ip and can use port 80 (check IP with `docker inspect idofwebcontainer`)
+
+### Running on host
+
+Install the depends:
+
+```
+sudo apt install libjwt zlib1g-dev postgresql postgresql-contrib libpq-dev libjwt-dev
+```
+
+Setup PostgreSQL:
+
+```
+sudo -u postgres psql
+CREATE USER testpguser with PASSWORD 'testpguser';
+CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
+```
 
 Run the backend:
 
@@ -30,32 +88,3 @@ python3 -m http.server
 ```
 
 Now you can visit http://localhost:8000/.
-
-## Setup/Dependencies
-
-```
-sudo apt install libjwt zlib1g-dev postgresql postgresql-contrib libpq-dev libjwt-dev
-```
-
-## Set up JWT signature keys
-
-You will also need to generate the private key for JSON Web Tokens:
-
-```
-openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
-openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
-
-```
-
-### Setting up PostgreSQL
-
-```
-sudo -u postgres psql
-CREATE USER testpguser with PASSWORD 'testpguser';
-CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
-```
-
-
-## `static/`
-
-The `static/mustache-build` are literal pages to build (like copying + running through parser), whereas `static/mustache` is simply for templates that get used to build pages.
