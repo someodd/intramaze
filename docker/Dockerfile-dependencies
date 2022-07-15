@@ -1,0 +1,12 @@
+FROM haskell:8.10
+
+# This is a problem...? or can just recopy after idk think this through... maybe should have dependency caching.
+# https://www.reddit.com/r/haskell/comments/t5uolz/dependency_build_cache/
+WORKDIR /opt/example
+COPY . /opt/example
+
+RUN apt-get update
+RUN apt-get install -y zlib1g-dev libpq-dev libjwt-dev nginx
+
+RUN cabal update
+RUN cabal build

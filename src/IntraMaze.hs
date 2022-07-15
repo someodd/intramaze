@@ -100,13 +100,14 @@ getConnectionString e = do
   return s
 
 
+-- FIXME: I just changed this from localhost to "db"
 getDefaultConnectionString :: Environment -> DB.ConnectionString
 getDefaultConnectionString Development =
-  "host=localhost port=5432 user=postgres dbname=IntraMaze_development"
+  "host=db port=5432 user=postgres dbname=IntraMaze_development"
 getDefaultConnectionString Production =
-  "host=localhost port=5432 user=postgres dbname=IntraMaze_production"
+  "host=db port=5432 user=postgres dbname=IntraMaze_production"
 getDefaultConnectionString Test =
-  "host=localhost port=5432 user=testpguser password=testpguser dbname=testpgdatabase"
+  "host=db port=5432 user=testpguser password=testpguser dbname=postgres"
 
 
 createConnectionString :: [(T.Text, T.Text)] -> DB.ConnectionString
