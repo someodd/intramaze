@@ -5,7 +5,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module IntraMaze.Actions where
+module Interwebz.Actions where
 
 import Data.Aeson ( FromJSON(..), Value(Null) )
 import GHC.Generics ( Generic )
@@ -15,24 +15,24 @@ import qualified Data.Text as T
 import Data.Text.Lazy (Text, toStrict)
 import qualified Database.Persist as DB
 import qualified Database.Persist.Postgresql as DB
-import IntraMaze.Models (AccountId, Room (..), Key(..), Portal, RowUUID (..), EntityField(..), PortalId, Account (..), Unique (..))
+import Interwebz.Models (AccountId, Room (..), Key(..), Portal, RowUUID (..), EntityField(..), PortalId, Account (..), Unique (..))
 import qualified Data.UUID as UUID
 import Network.HTTP.Types.Status (created201,
     notFound404, status204, status404, status403)
 import Network.Wai.Parse (FileInfo(..))
 import Web.Scotty.Trans (ActionT,
     json, jsonData, param, status, files, finish)
-import IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
+import Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages)
 import Database.Persist (Entity, Filter (Filter), FilterValue (..), getBy)
-import qualified IntraMaze.Middle as Middle
+import qualified Interwebz.Middle as Middle
 import qualified Data.Text.Lazy as TL
-import qualified IntraMaze.JWT as JWT (makeToken, UserClaims (userId))
+import qualified Interwebz.JWT as JWT (makeToken, UserClaims (userId))
 import Data.Text.Encoding as TSE ( decodeUtf8 )
-import IntraMaze.JWT (UserClaims (..))
-import qualified IntraMaze.JsonRequests as JsonRequests
-import IntraMaze.Config ( ConfigM )
-import IntraMaze.Database (accountEntityToUuid')
-import IntraMaze.ActionHelpers
+import Interwebz.JWT (UserClaims (..))
+import qualified Interwebz.JsonRequests as JsonRequests
+import Interwebz.Config ( ConfigM )
+import Interwebz.Database (accountEntityToUuid')
+import Interwebz.ActionHelpers
 import Database.PostgreSQL.Simple.Errors (ConstraintViolation(UniqueViolation))
 
 

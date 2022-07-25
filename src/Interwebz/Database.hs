@@ -2,16 +2,16 @@
 
 For actual database models look at the `Models` module.
 -}
-module IntraMaze.Database where
+module Interwebz.Database where
 
 import qualified Database.Persist as DB
-import IntraMaze.Models (Account, RowUUID(..))
+import Interwebz.Models (Account, RowUUID(..))
 import Database.Persist (PersistValue(..), LiteralType (Escaped), keyToValues)
 import qualified Data.UUID as UUID
 import qualified Data.ByteString.UTF8 as BSU
 import Web.Scotty.Trans (ActionT)
-import qualified IntraMaze.Middle as Middle
-import IntraMaze.Config (ConfigM(..))
+import qualified Interwebz.Middle as Middle
+import Interwebz.Config (ConfigM(..))
 
 
 -- | Helper function to parse/get the `RowUUID` from a account entity.

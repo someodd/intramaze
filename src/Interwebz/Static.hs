@@ -5,7 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-module IntraMaze.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile) where
+module Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile) where
 
 import GHC.Generics ( Generic )
 import qualified Data.Vector as Vector (fromList)
@@ -13,7 +13,7 @@ import Data.List (intercalate)
 import Data.HashMap.Strict ( fromList )
 import Data.Text (unpack, pack)
 import qualified Text.Mustache.Types as M (Value(..))
-import IntraMaze.Models (RowUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
+import Interwebz.Models (RowUUID (..), Room(..), Portal(..), Key (RoomKey, AccountKey), Polygon (Polygon), accountUsername, Account, EntityField (..))
 import qualified Data.ByteString.Lazy as BSL (writeFile, ByteString)
 import System.FilePath (joinPath, (</>), takeDirectory)
 import System.Directory (createDirectoryIfMissing, copyFile, doesDirectoryExist)
@@ -23,18 +23,18 @@ import Text.Mustache (ToMustache (toMustache))
 import qualified Data.HashMap.Strict as HashMap
 --import Control.Monad (filterM)
 import qualified Data.Text as T
-import qualified IntraMaze.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
+import qualified Interwebz.Config as Conf (getAppEnvConfig, AppEnvConfig(..), appEnvConfigWhitelist)
 import qualified Text.Mustache.Types as MTypes
-import qualified IntraMaze.Middle as Middle
+import qualified Interwebz.Middle as Middle
 import qualified Database.Persist.Sql as DB
 import Web.Scotty.Trans (ActionT)
-import IntraMaze.Config (ConfigM)
+import Interwebz.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.UUID as UUID
 import Database.Persist (keyToValues, LiteralType (Escaped))
 import Database.Persist.PersistValue (PersistValue(..))
 import qualified Data.ByteString.UTF8 as BSU
-import IntraMaze.Database (accountEntityToUuid)
+import Interwebz.Database (accountEntityToUuid)
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.

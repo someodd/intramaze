@@ -4,6 +4,7 @@ FROM haskell:8.10
 # https://www.reddit.com/r/haskell/comments/t5uolz/dependency_build_cache/
 WORKDIR /opt/example
 COPY . /opt/example
+RUN rm -rf dist-newstyle
 
 RUN apt-get update
 RUN apt-get install -y zlib1g-dev libpq-dev libjwt-dev nginx

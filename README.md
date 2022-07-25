@@ -1,4 +1,4 @@
-# IntraMaze
+# Interwebz
 
 Random chat encounters in a collaboratively-built maze.
 
@@ -41,7 +41,7 @@ SCOTTY_SITE_TITLE=MazeQuest
 This command will build all the dependencies as an image, so dependencies don't have to be built/installed/downloaded every time:
 
 ```
-docker build -f Dockerfile-depends -t intramaze_depends .
+docker build -f Dockerfile-depends -t Interwebz_depends .
 ```
 
 This command will bring in new changes to the codebase and compile, then put up the PostgreSQL service, as well as the

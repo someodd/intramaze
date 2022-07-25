@@ -2,4 +2,4 @@ module Main
   ( main
   ) where
 
-import IntraMaze (main)
+import Interwebz (main)
