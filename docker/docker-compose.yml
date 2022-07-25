@@ -3,13 +3,17 @@ services:
   web:
     depends_on:
       - db
-    build: .
+    build:
+      dockerfile: docker/Dockerfile
+      context: ..
     ports:
       - "80:8080"
       - "8080:80"
     environment:
       - SCOTTY_ENV
       - SCOTTY_SITE_TITLE
+    volumes:
+      - built:/opt/example/built
   db:
     image: postgres:14.1-alpine
     restart: always
@@ -23,4 +27,6 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/create_tables.sql
 volumes:
   db:
+    driver: local
+  built:
     driver: local

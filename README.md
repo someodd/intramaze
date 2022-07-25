@@ -41,20 +41,22 @@ SCOTTY_SITE_TITLE=MazeQuest
 This command will build all the dependencies as an image, so dependencies don't have to be built/installed/downloaded every time:
 
 ```
-docker build -f Dockerfile-depends -t Interwebz_depends .
+docker build -f docker/Dockerfile-depends -t interwebz_depends .
 ```
 
 This command will bring in new changes to the codebase and compile, then put up the PostgreSQL service, as well as the
 API+static service (using nginx as reverse proxy):
 
 ```
-docker compose --env-file .env.dev up
+docker compose -f docker/docker-compose.yml --env-file .env.dev up
 ```
 
 Now you can visit the website using either:
 
   * http://localhost:8080/new-room.html
   * type in the docker ip and can use port 80 (check IP with `docker inspect idofwebcontainer`)
+
+You'll want to keep an eye on the PostgreSQL database volume, as well as the built volume (which contains room images and the static site). Try `docker volume ls`. Read more about volumes, including backing up and restoring, on [the official Docker volumes documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
 
 ### Running on host
 
