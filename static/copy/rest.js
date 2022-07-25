@@ -1,9 +1,9 @@
 // FIXME: stuff should return response not nothing!
 
 /**
- * Interact with the IntraMaze REST API.
+ * Interact with the Interwebz REST API.
  * 
- * Generic IntraMaze REST API JavaScript interface.
+ * Generic Interwebz REST API JavaScript interface.
  */
 
 

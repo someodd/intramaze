@@ -1,4 +1,4 @@
-FROM intramaze_depends:latest
+FROM Interwebz_depends:latest
 
 # In case source has changed (compared to depends).
 WORKDIR /opt/example

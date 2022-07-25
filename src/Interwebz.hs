@@ -5,9 +5,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module IntraMaze where
+module Interwebz where
 
--- FIXME: start moving things to IntraMaze.Routes or IntraMaze.Actions?
+-- FIXME: start moving things to Interwebz.Routes or Interwebz.Actions?
 -- FIXME: qualified imports?
 import Network.Wai.Middleware.Cors
 import Protolude (putText, threadDelay, forever, forkIO)
@@ -20,8 +20,8 @@ import Data.Default (def)
 import qualified Data.Text as T
 --import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import qualified Database.Persist.Postgresql as DB
-import IntraMaze.Models (migrateAll)
-import qualified IntraMaze.ChatWebSocket as CWS (application, newServerState)
+import Interwebz.Models (migrateAll)
+import qualified Interwebz.ChatWebSocket as CWS (application, newServerState)
 import Control.Concurrent (MVar, newMVar)
 import Network.HTTP.Types.Status (internalServerError500)
 import Network.Wai (Middleware, Response)
@@ -37,12 +37,12 @@ import Web.Scotty.Trans (Options, ScottyT, defaultHandler,
 import qualified Network.Wai.Handler.WebSockets as WaiWs
 import Control.Monad (when)
 import Network.WebSockets.Connection (pingThread)
-import IntraMaze.ChatWebSocket (ServerState)
-import qualified IntraMaze.Middle as Middle
+import Interwebz.ChatWebSocket (ServerState)
+import qualified Interwebz.Middle as Middle
 import Data.Text.Encoding as TSE
-import qualified IntraMaze.Actions as Actions
-import IntraMaze.Config
-import IntraMaze.Static (setupEssentials)
+import qualified Interwebz.Actions as Actions
+import Interwebz.Config
+import Interwebz.Static (setupEssentials)
 
 
 main :: IO ()
@@ -103,9 +103,9 @@ getConnectionString e = do
 -- FIXME: I just changed this from localhost to "db"
 getDefaultConnectionString :: Environment -> DB.ConnectionString
 getDefaultConnectionString Development =
-  "host=db port=5432 user=postgres dbname=IntraMaze_development"
+  "host=db port=5432 user=postgres dbname=Interwebz_development"
 getDefaultConnectionString Production =
-  "host=db port=5432 user=postgres dbname=IntraMaze_production"
+  "host=db port=5432 user=postgres dbname=Interwebz_production"
 getDefaultConnectionString Test =
   "host=db port=5432 user=testpguser password=testpguser dbname=postgres"
 

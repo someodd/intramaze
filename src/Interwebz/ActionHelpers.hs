@@ -11,19 +11,19 @@ Might get merged into Middle?
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module IntraMaze.ActionHelpers where
+module Interwebz.ActionHelpers where
 
-import IntraMaze.Models (RowUUID, Key (..), EntityField (..))
+import Interwebz.Models (RowUUID, Key (..), EntityField (..))
 import Web.Scotty.Trans (ActionT)
-import qualified IntraMaze.Middle as Middle
+import qualified Interwebz.Middle as Middle
 import Control.Monad.IO.Class (liftIO)
-import IntraMaze.Config (ConfigM(..))
+import Interwebz.Config (ConfigM(..))
 import qualified Database.Persist.Class as DB
-import IntraMaze.Static (getUserRooms, buildProfile, createNewRoom)
+import Interwebz.Static (getUserRooms, buildProfile, createNewRoom)
 import qualified Database.Persist as DB
 import Database.Persist (Entity(..))
-import qualified IntraMaze.JsonRequests as JsonRequests
-import IntraMaze.JWT
+import qualified Interwebz.JsonRequests as JsonRequests
+import Interwebz.JWT
 import qualified Database.Persist.Sql as DB
 
 

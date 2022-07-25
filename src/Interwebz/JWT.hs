@@ -1,6 +1,6 @@
 {-|
 Module      : JWT
-Description : JSON Web Token system for authenticating IntraMaze REST API requests.
+Description : JSON Web Token system for authenticating Interwebz REST API requests.
 
 = High-level overview
 
@@ -53,7 +53,7 @@ For more info on JWT: <https://jwt.io/introduction>
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
-module IntraMaze.JWT (decodeAndValidateFull, UserClaims(..), makeToken) where
+module Interwebz.JWT (decodeAndValidateFull, UserClaims(..), makeToken) where
 
 import Data.Data
 import           Web.Libjwt

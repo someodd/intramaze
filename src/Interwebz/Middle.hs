@@ -8,7 +8,7 @@ Might be migrating error stuff to its own module.
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module IntraMaze.Middle where
+module Interwebz.Middle where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Reader (asks)
@@ -20,12 +20,12 @@ import Web.Scotty.Trans (ActionT, finish, json, ScottyError (stringError, showEr
 import qualified Web.Scotty.Trans as Scotty (status)
 import Database.PostgreSQL.Simple.Errors
 
-import IntraMaze.Config
+import Interwebz.Config
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text as T
 import Database.PostgreSQL.Simple (SqlError)
 import qualified Data.UUID as UUID
-import IntraMaze.Models (RowUUID(RowUUID))
+import Interwebz.Models (RowUUID(RowUUID))
 import Web.Slug (Slug, SlugException (..), parseSlug)
 import Control.Monad.Catch (try)
 

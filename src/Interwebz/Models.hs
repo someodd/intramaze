@@ -13,7 +13,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module IntraMaze.Models where
+module Interwebz.Models where
 
 import GHC.Generics ( Generic )
 import Data.Text (Text)

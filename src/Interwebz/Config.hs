@@ -1,4 +1,4 @@
-{-| Application configuration.
+{- | Application configuration.
 
 This module not only defines settings directly, but also provides a system for defining
 configuration settings, like through environmental variables, and more configuration-related
@@ -13,7 +13,7 @@ The Environmental Environment Configuration System
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
-module IntraMaze.Config
+module Interwebz.Config
     (
     -- * Configuration for Scotty
     -- Configuration specifically for code on the Scotty library level, like the database pool.
@@ -66,6 +66,7 @@ data AppEnvConfig = AppEnvConfig
   { confSiteTitle :: Maybe T.Text 
   -- ^ The site title allows the static site builder to incorporate it as a Mustache variable as
   -- {{confSiteTitle}}.
+  -- , conf
   } deriving (Show)
 
 

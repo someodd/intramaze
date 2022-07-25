@@ -10,7 +10,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
-module IntraMaze.JsonRequests where
+module Interwebz.JsonRequests where
 
 import Control.Monad (MonadPlus (mzero))
 import GHC.Generics ( Generic )
@@ -19,16 +19,16 @@ import qualified Data.ByteString as ByteString (ByteString)
 import Web.Scotty.Trans (ActionT, jsonData, header)
 import qualified Data.Text.Lazy.Encoding as TLE ( encodeUtf8 )
 
-import qualified IntraMaze.JWT as JWT (UserClaims(..), decodeAndValidateFull)
-import qualified IntraMaze.Models as Models (Room(..), EntityField(..))
-import qualified IntraMaze.Middle as Middle (ApiError(..), jsonResponse, ErrorName (AuthenticationFailure))
-import IntraMaze.Config (ConfigM)
+import qualified Interwebz.JWT as JWT (UserClaims(..), decodeAndValidateFull)
+import qualified Interwebz.Models as Models (Room(..), EntityField(..))
+import qualified Interwebz.Middle as Middle (ApiError(..), jsonResponse, ErrorName (AuthenticationFailure))
+import Interwebz.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import qualified Database.Persist as DB
 import Database.Persist (Update)
 import Data.Maybe (catMaybes)
 import qualified Data.ByteString.Lazy as BL
-import IntraMaze.JWT (UserClaims)
+import Interwebz.JWT (UserClaims)
 import qualified Data.Aeson.Types as Aeson
 import Data.Aeson ((.:))
 
