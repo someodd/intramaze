@@ -12,7 +12,12 @@ services:
     environment:
       - SCOTTY_ENV
       - SCOTTY_SITE_TITLE
+      - SCOTTY_DATABASE_URL
+    # if test then use local mount, otherwise use volume?
     volumes:
+      # this is for changing to localmount! ro
+      #- ${DEV_VOLUME_STATIC}
+      # See readme about this line below.
       - built:/opt/example/built
   db:
     image: postgres:14.1-alpine

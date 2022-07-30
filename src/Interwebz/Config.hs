@@ -47,7 +47,7 @@ data Environment
 --
 -- Related: `ConfigM`
 data Config = Config
-  { environment :: Environment
+  { environment :: Environment -- FIXME: shouldn't this be in appenvconfig?!
   , pool :: DB.ConnectionPool
   , appEnvConfig :: AppEnvConfig
   }
@@ -67,6 +67,9 @@ data AppEnvConfig = AppEnvConfig
   -- ^ The site title allows the static site builder to incorporate it as a Mustache variable as
   -- {{confSiteTitle}}.
   -- , conf
+  , confDatabaseUrl :: Maybe String
+  -- ^ The connection string used to connect to the PostgreSQL database. The format is
+  -- postgres://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]...
   } deriving (Show)
 
 
@@ -88,13 +91,14 @@ appEnvConfPrefix = "SCOTTY_"
 -- An example use is using envvars to set 
 getAppEnvConfig :: IO AppEnvConfig
 getAppEnvConfig = do
-  AppEnvConfig <$>
-    lookupEnvPrefixed "SITE_TITLE"
+  AppEnvConfig
+    <$> (fmap T.pack <$> lookupEnvPrefixed "SITE_TITLE")
+    <*> lookupEnvPrefixed "DATABASE_URL"
  where
-  lookupEnvPrefixed :: String -> IO (Maybe T.Text)
+  lookupEnvPrefixed :: String -> IO (Maybe String)
   lookupEnvPrefixed s = do
       maybeEnvValue <- lookupEnv . (appEnvConfPrefix ++) $ s
-      pure $ fmap T.pack maybeEnvValue
+      pure maybeEnvValue
 
 
 {-

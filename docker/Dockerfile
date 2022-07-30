@@ -18,6 +18,8 @@ EXPOSE 8080
 #EXPOSE 3000/tcp
 
 # startup script
+RUN mv /opt/example/docker/web-startup.sh /usr/local/bin/startup.sh
+RUN chmod 777 /usr/local/bin/startup.sh
 CMD /usr/local/bin/startup.sh
 #ENTRYPOINT /bin/bash
 # needs to also launch python server, or nginx

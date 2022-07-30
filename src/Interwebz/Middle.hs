@@ -122,6 +122,9 @@ toRowUuid s errorString =
       Just uuid -> pure . RowUUID $ uuid
 
 
+type Catcher a = SqlError -> ConstraintViolation -> IO (Either ApiError a)
+
+
 {- | Database error catcher.
 
 Can also be used for overriding and using custom errors. For example:
@@ -129,7 +132,7 @@ Can also be used for overriding and using custom errors. For example:
   customCatcher e (UniqueViolation "unique_username") = pure $ Left $ Middle.ApiError 400 Middle.UsernameTaken $ "The provided username is already taken. More details: " ++ show e
   customCatcher e t = Middle.catcher e t
 -}
-catcher :: SqlError -> ConstraintViolation -> IO (Either ApiError a)
+catcher :: Catcher a
 catcher e (UniqueViolation someColumn) =
   pure $ Left $ ApiError
     500

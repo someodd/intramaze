@@ -18,7 +18,7 @@ import Control.Monad.Reader (runReaderT)
 import Data.Aeson (Value (Null), (.=), object)
 import Data.Default (def)
 import qualified Data.Text as T
---import Data.Text.Encoding (encodeUtf8, decodeUtf8)
+--import Data.Text.Encoding (encodeUtf8, decodeUtf8)  
 import qualified Database.Persist.Postgresql as DB
 import Interwebz.Models (migrateAll)
 import qualified Interwebz.ChatWebSocket as CWS (application, newServerState)
@@ -30,7 +30,7 @@ import Network.Wai.Handler.Warp (Settings, defaultSettings,
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import System.Environment (lookupEnv)
 import Web.Heroku (parseDatabaseUrl)
-import Web.Scotty.Trans (Options, ScottyT, defaultHandler,
+import Web.Scotty.Trans (Options, ActionT, ScottyT, defaultHandler,
     get, json, middleware, notFound, post,
     settings, showError, status, verbose, put, delete, patch, scottyAppT)
 --import qualified Network.Wai.Handler.Warp as Warp
@@ -43,6 +43,7 @@ import Data.Text.Encoding as TSE
 import qualified Interwebz.Actions as Actions
 import Interwebz.Config
 import Interwebz.Static (setupEssentials)
+import Interwebz.Database (createDefaultAdmin)
 
 
 main :: IO ()
@@ -63,7 +64,7 @@ getConfig :: IO Config
 getConfig = do
   e <- getEnvironment
   aec <- getAppEnvConfig
-  p <- getPool e
+  p <- getPool e aec
   return Config
     { environment = e
     , appEnvConfig = aec
@@ -81,9 +82,9 @@ getEnvironment = do
   return e
 
 
-getPool :: Environment -> IO DB.ConnectionPool
-getPool e = do
-  s <- getConnectionString e
+getPool :: Environment -> AppEnvConfig -> IO DB.ConnectionPool
+getPool e appEnvConf = do
+  let s = getConnectionString e appEnvConf
   let n = getConnectionSize e
   case e of
     Development -> runStdoutLoggingT (DB.createPostgresqlPool s n)
@@ -91,15 +92,18 @@ getPool e = do
     Test -> runNoLoggingT (DB.createPostgresqlPool s n)
 
                                                                                                                                                                                 
-getConnectionString :: Environment -> IO DB.ConnectionString
-getConnectionString e = do
-  m <- lookupEnv "DATABASE_URL"
-  let s = case m of
-        Nothing -> getDefaultConnectionString e
-        Just u -> createConnectionString (parseDatabaseUrl u)
-  return s
+getConnectionString :: Environment -> AppEnvConfig -> DB.ConnectionString
+getConnectionString e appEnvConf = do
+  -- FIXME: should derive from app env config
+  --m <- lookupEnv "DATABASE_URL"
+  let m = confDatabaseUrl appEnvConf
+  case m of
+    Nothing -> getDefaultConnectionString e
+    Just u -> createConnectionString (parseDatabaseUrl u)
+    -- above used to be `createConnectionString (parseDatabaseUrl u)`, but it's broken! maybe pointless? for parsing what we expect for a string... oh i guess it's because it expects a URI?!
 
 
+-- FIXME: why would this EVER be handy? do not even bother! delete soon!
 -- FIXME: I just changed this from localhost to "db"
 getDefaultConnectionString :: Environment -> DB.ConnectionString
 getDefaultConnectionString Development =
@@ -131,9 +135,11 @@ runApplication c = do
   scottyOptsT' state o r app
 
 
--- CUSTOM FOR WS
--- thanks in part due to https://gist.github.com/andrevdm/9560b5e31933391694811bf22e25c312
 -- | Run a scotty application using the warp server, passing extra options.
+--
+-- Made custom for web sockets to run along side the REST server.
+--
+-- Thanks in part due to https://gist.github.com/andrevdm/9560b5e31933391694811bf22e25c312
 -- NB: scottyOpts opts === scottyOptsT opts id
 scottyOptsT' :: (Monad m, MonadIO n)
             => MVar ServerState
@@ -178,11 +184,18 @@ getSettings e = do
 
 getPort' :: IO (Maybe Int)
 getPort' = do
+  -- FIXME: should come from AEC
   m <- lookupEnv "PORT"
   let p = case m of
         Nothing -> Nothing
         Just s -> Just (read s)
   return p
+
+
+-- | Stuff to do the first time the application is ran, such as initializing the database.
+initialize :: ActionT Middle.ApiError ConfigM ()
+initialize = do
+  createDefaultAdmin
 
 
 application :: Config -> ScottyT Middle.ApiError ConfigM ()
@@ -223,6 +236,7 @@ application c = do
 
   -- rest...
   notFound Actions.notFoundA
+  --initialize
 
 
 loggingM :: Environment -> Middleware

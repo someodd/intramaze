@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  web:
+    env_file:
+      - ./.env.dev
+    volumes:
+      #- built:/opt/example/built
+      - ../static:/opt/example/static:ro
+  db:
+    env_file:
+      - ./.env.dev

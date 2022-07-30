@@ -34,13 +34,21 @@ async function swapInsideAuthenticated(element, ifAuthenticated, ifAnonymous) {
  * @param {String} password - 
  */
 async function login(username, password) {
-    const hopefullyToken = authenticate(username, password);
-    console.log(await hopefullyToken)
+    const hopefullyToken = await authenticate(username, password);
+    console.log(hopefullyToken)
     console.log("ok")
-    /* now set the cookie with the token */
-    document.cookie = "token=" + await hopefullyToken;
-    const user = await getUser()
-    window.location.replace("/users/" + user.userName + ".html")
+    if (hopefullyToken.hasOwnProperty("errorStatus")) {
+        showErrorMessage(document.getElementById("login-form"), hopefullyToken.errorName + hopefullyToken.errorMessage)
+        console.log("matched name")
+    } else if (hopefullyToken.successStatus) {
+        /* now set the cookie with the token */
+        document.cookie = "token=" + hopefullyToken + "; SameSite=Strict";
+        const user = await getUser()
+        window.location.replace("/users/" + user.userName + ".html")
+    } else {
+        console.log("should be impossible. broken api.")
+        console.log(hopefullyToken)
+    }
 }
 
 function showErrorMessage(wherein, errorMessage) {

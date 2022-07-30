@@ -11,5 +11,6 @@ RUN apt-get update && apt-get install -y zlib1g-dev libpq-dev libjwt-dev nginx &
 RUN cabal update && cabal build
 
 # startup script
+# NOTE: would it be better to put this in the actual regular Dockerfile?
 RUN mv /opt/example/docker/web-startup.sh /usr/local/bin/startup.sh
 RUN chmod 777 /usr/local/bin/startup.sh

@@ -153,8 +153,7 @@ async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */
     const response = await restApiRequest('users/login', 'POST', {username: username, password: password})
     console.log(response);
-    // FIXME: what if fail?
-    return response.successContent;
+    return response;
 }
 
 

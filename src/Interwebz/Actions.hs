@@ -31,7 +31,7 @@ import Data.Text.Encoding as TSE ( decodeUtf8 )
 import Interwebz.JWT (UserClaims (..))
 import qualified Interwebz.JsonRequests as JsonRequests
 import Interwebz.Config ( ConfigM )
-import Interwebz.Database (accountEntityToUuid')
+import Interwebz.Database (accountEntityToUuid', createAccount)
 import Interwebz.ActionHelpers
 import Database.PostgreSQL.Simple.Errors (ConstraintViolation(UniqueViolation))
 
@@ -65,9 +65,9 @@ postUserA = do
   -- Although it would be interesting to do a value check as a constraint in PostgreSQL,
   -- check the validity of the username here. We simply sanitize through the slug.
   (t :: UsernamePassword) <- jsonData
+  -- FIXME: should username validator go to the createAccount thing?
   _ <- usernameValidator $ TL.toStrict $ username t
-  -- FIXME: this can raise an error SqlError and it won't be caught/transformed into a scotty error!
-  _ <- Middle.runDbWithCatcher catcher (DB.rawExecute "INSERT INTO \"account\" (username, password) VALUES (?, crypt(?, gen_salt('bf')))" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
+  _ <- createAccount catcher (TL.toStrict $ username t) (TL.toStrict $ password t)
   -- Now we need to query the database just to get the new user's uuid.
   maybeAccount :: Maybe (Entity Account) <- Middle.runDB $ getBy . UniqueUsername $ toStrict $ username t  
   rowUuid <- maybe
