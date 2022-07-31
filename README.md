@@ -109,3 +109,5 @@ The addresses expected for the REST API vs the static directory communicating
 are shared/assume port 80 or 8080 and localhost, I think? So I need to be sure
 to make it so addresses can be configured differently. This could be resolved
 with CLI option to host `static` through the same app as REST API: https://hackage.haskell.org/package/wai-middleware-static-0.9.2/docs/Network-Wai-Middleware-Static.html
+
+Is this actually a real issue? Test!

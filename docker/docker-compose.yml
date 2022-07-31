@@ -9,6 +9,8 @@ services:
     ports:
       - "80:8080"
       - "8080:80"
+      - "443:443"
+      - "4434:443"
     environment:
       - SCOTTY_ENV
       - SCOTTY_SITE_TITLE
@@ -19,6 +21,8 @@ services:
       #- ${DEV_VOLUME_STATIC}
       # See readme about this line below.
       - built:/opt/example/built
+      # this is sloppy fixme
+      #- letsencrypt:/etc/letsencrypt
   db:
     image: postgres:14.1-alpine
     restart: always
@@ -34,4 +38,6 @@ volumes:
   db:
     driver: local
   built:
+    driver: local
+  letsencrypt:
     driver: local

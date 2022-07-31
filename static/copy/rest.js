@@ -147,7 +147,7 @@ async function getRoom (uuid) {
  * 
  * @param {String} username -  
  * @param {String} password -  
- * @returns On success returns the JSON web token. Otherwise an error message.
+ * @returns On success returns the JSON web token (wrapped with some other data). Otherwise an error message.
  */
 async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */

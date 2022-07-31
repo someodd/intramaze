@@ -42,7 +42,7 @@ async function login(username, password) {
         console.log("matched name")
     } else if (hopefullyToken.successStatus) {
         /* now set the cookie with the token */
-        document.cookie = "token=" + hopefullyToken + "; SameSite=Strict";
+        document.cookie = "token=" + hopefullyToken.successContent + "; SameSite=Strict; Secure";
         const user = await getUser()
         window.location.replace("/users/" + user.userName + ".html")
     } else {

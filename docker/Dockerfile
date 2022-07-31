@@ -13,6 +13,7 @@ RUN chown -R www-data:www-data /opt/example/built
 # Shouldn't expose both! Just expose 80! FIXME bu ti'll have to test out commands first
 EXPOSE 80
 EXPOSE 8080
+EXPOSE 443
 #EXPOSE 3000
 #EXPOSE 80/tcp
 #EXPOSE 3000/tcp
