@@ -91,7 +91,6 @@ library
         postgresql-simple,
         frontmatter,
         http-types
-        , jose-jwt
         , regex-compat
         , text-show
         , time
