@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wwarn #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}

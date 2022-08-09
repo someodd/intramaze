@@ -26,7 +26,7 @@ import qualified Data.Text as T
 import Database.PostgreSQL.Simple (SqlError)
 import qualified Data.UUID as UUID
 import Interwebz.Models (RowUUID(RowUUID))
-import Web.Slug (Slug, SlugException (..), parseSlug)
+import Slug (Slug, SlugException (..), parseSlug)
 import Control.Monad.Catch (try)
 
 

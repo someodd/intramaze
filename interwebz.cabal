@@ -29,7 +29,10 @@ common shared-properties
   -- Base language which the package is written in.
   default-language:    Haskell2010
   
-  extra-libraries: libjwt-dev
+  --extra-libraries: libjwt-dev
+
+tested-with:
+    GHC == 9.0.2
 
 executable Interwebz
     main-is:          Main.hs
@@ -40,7 +43,8 @@ executable Interwebz
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:
-        base ^>=4.14.3.0,
+        --base ^>=4.14.3.0,
+        base==4.15.1.0,
         Interwebz
     hs-source-dirs:   app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
@@ -51,51 +55,48 @@ library
     import: shared-properties
     hs-source-dirs:      src
     build-depends:
-        base ^>=4.14.3.0,
-        text,
-        uuid,
-        memory,
-        either,
-        time,
-        persistent,
-        utf8-string,
-        http-api-data,
-        path-pieces,
-        filepath,
-        directory,
-        libjwt-typed,
-        monad-time,
-        cryptonite,
-        bytestring,
-        monad-logger,
-        cryptonite,
-        mtl,
-        transformers,
-        aeson,
-        data-default,
-        exceptions,
-        wai,
-        mustache,
-        containers,
-        unordered-containers,
-        vector,
-        dir-traverse,
-        -- might not need wai cors FIXME
-        wai-websockets,
-        protolude,
-        wai-cors,
-        warp,
-        wai-extra,
-        heroku,
-        scotty,
-        slug,
-        persistent-postgresql,
-        postgresql-simple,
-        frontmatter,
-        http-types
-        , regex-compat
-        , text-show
-        , time
+        aeson==2.0.3.0,
+        base==4.15.1.0,
+        bytestring==0.10.12.1,
+        containers==0.6.4.1,
+        cryptonite==0.29,
+        data-default==0.7.1.1,
+        dir-traverse==0.2.3.0,
+        directory==1.3.6.2,
+        either==5.0.2,
+        exceptions==0.10.4,
+        filepath==1.4.2.1,
+        frontmatter==0.1.0.2,
+        heroku==0.1.2.3,
+        http-api-data==0.4.3,
+        http-types==0.12.3,
+        libjwt-typed==0.2,
+        memory==0.16.0,
+        monad-logger==0.3.36,
+        monad-time==0.3.1.0,
+        mtl==2.2.2,
+        mustache==2.4.1,
+        path-pieces==0.2.1,
+        persistent==2.13.3.5,
+        persistent-postgresql==2.13.5.0,
+        postgresql-simple==0.6.4,
+        protolude==0.3.2,
+        regex-compat==0.95.2.1,
+        scotty==0.12,
+        text==1.2.5.0,
+        text-show==3.9.7,
+        time==1.9.3,
+        transformers==0.5.6.2,
+        unordered-containers==0.2.17.0,
+        utf8-string==1.0.2,
+        uuid==1.3.15,
+        vector==0.12.3.1,
+        wai==3.2.3,
+        wai-cors==0.2.7,
+        wai-extra==3.1.12.1,
+        wai-websockets==3.0.1.2,
+        warp==3.3.21,
+        websockets==0.12.7.3,
     ghc-options: -Wall -Werror
     build-depends: websockets
     exposed-modules:
@@ -111,3 +112,4 @@ library
         Interwebz.ActionHelpers
         Interwebz.Database
         Template
+        Slug

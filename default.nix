@@ -3,7 +3,7 @@
 , filepath, frontmatter, heroku, http-api-data, http-types, lib
 , libjwt, libjwt-typed, memory, monad-logger, monad-time, mtl
 , mustache, path-pieces, persistent, persistent-postgresql
-, postgresql-simple, protolude, regex-compat, scotty, slug, text
+, postgresql-simple, protolude, regex-compat, scotty, text
 , text-show, time, transformers, unordered-containers, utf8-string
 , uuid, vector, wai, wai-cors, wai-extra, wai-websockets, warp
 , websockets
@@ -20,11 +20,11 @@ mkDerivation {
     heroku http-api-data http-types libjwt-typed memory monad-logger
     monad-time mtl mustache path-pieces persistent
     persistent-postgresql postgresql-simple protolude regex-compat
-    scotty slug text text-show time transformers unordered-containers
+    scotty text text-show time transformers unordered-containers
     utf8-string uuid vector wai wai-cors wai-extra wai-websockets warp
     websockets
   ];
-  librarySystemDepends = [ libjwt ];
+  #librarySystemDepends = [ libjwt ];
   executableHaskellDepends = [ base ];
   license = "unknown";
   mainProgram = "Interwebz";
