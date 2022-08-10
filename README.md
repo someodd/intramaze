@@ -23,8 +23,28 @@ You will need to generate the private key for JSON Web Tokens (regardless how yo
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
 openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
+```
+
+### Running with `nix`
+
+Nix implementation is somewhat incomplete, especially `nix-shell`.
+
+You can build with:
 
 ```
+nix-build release.nix
+```
+
+You can enter the developer environment with:
+
+```
+nix-shell
+```
+
+The developer environment isn't very useful as of yet because I have to include
+various tools for testing and more, like doctests, nix cabal and ghc, nix Docker
+setup, and more. It's a lazy and sloppy implementation at the moment that just
+serves as a proof-of-concept.
 
 ### Running with Docker
 
