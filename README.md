@@ -42,9 +42,10 @@ nix-shell
 ```
 
 The developer environment isn't very useful as of yet because I have to include
-various tools for testing and more, like doctests, nix cabal and ghc, nix Docker
-setup, and more. It's a lazy and sloppy implementation at the moment that just
-serves as a proof-of-concept.
+various tools for testing and more, like doctests, nix cabal and ghc, nix
+Docker setup, and more. in the future, nix shell should launch db and more.
+should launch the db server, the http server, the rest api server? It's a lazy
+and sloppy implementation at the moment that just serves as a proof-of-concept.
 
 ### Running with Docker
 
