@@ -11,6 +11,13 @@ API and chat websocket daemon written in Haskell.
 
 I use Debian (unstable).
 
+## A bonus purpose
+
+This is also made to be a demo of practical Haskell and Nix, demoing common web
+technologies (JWT, REST, Mustache). I felt there wasn't enough Haskell and Nix
+examples, especially not well documented ones, that show by example how to
+complete something simple and practical like this project.
+
 ## Building notes
 
 This project does not use Stack. The file is only here as a hacky fix.
