@@ -58,11 +58,16 @@ nix-shell
 ```
 
 You can even `cabal build` inside of the `nix-shell`! The shell comes loaded
-with `haskell-langauge-server`, which you can use in combination with the
-*Haskell* and *Nix Environment Selector* VSCode/VSCodium extensions.
+with `haskell-langauge-server` (and `hlint`, I also want to use `ormolu` so you
+can format files using this), which you can use in combination with the
+*Haskell* and *Nix Environment Selector* VSCode/VSCodium extensions. Make sure
+you click "selected" when you get the pop up in the lower right with Nix
+Environment Selector.
 
 The shell has postgres installed, but it's not set up yet (it will be!). I will
 also set up Docker.
+
+The shell also has `doctest` installed so you can run tests in the shell.
 
 ### Running with Docker
 
