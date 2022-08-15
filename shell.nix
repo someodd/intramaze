@@ -14,14 +14,25 @@ let
 in
  pkgs.haskellPackages.shellFor {
    packages = p: [
-     p.cabal2nix-unstable
-     p.distribution-nixpkgs
-     p.hackage-db
+     #p.cabal2nix-unstable
+     #p.distribution-nixpkgs
+     #p.hackage-db
+     pkgs.haskellPackages.postgresql-libpq
+     waybar
    ];
  
+   buildInputs = [pkgs.postgresql pkgs.postgresql.lib];
+   systemPackages = [pkgs.postgresql];
    # for running doctests locally
    nativeBuildInputs = [
+     pkgs.haskell-language-server
      pkgs.haskellPackages.doctest
+     pkgs.haskellPackages.ghcide
+     #pkgs.haskellPackages.Cabal_3_6_3_0
+     pkgs.cabal-install
+     #pkgs.libjwt
+     pkgs.postgresql
+     pkgs.postgresql.lib
    ];
 
    # set environment variable, so the development version of

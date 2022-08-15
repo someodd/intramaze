@@ -3,3 +3,4 @@ built/
 *.pem
 .env*
 result/
+result

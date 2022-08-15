@@ -2,19 +2,28 @@
 
 Random chat encounters in a collaboratively-built maze.
 
-A maze made out of rooms users have made and arbitrarily linked together. Explore the maze, if you bump into the other users in the same room you can have an ephemeral conversation.
+A maze made out of rooms users have made and arbitrarily linked together.
+Explore the maze, if you bump into the other users in the same room you can
+have an ephemeral conversation.
+
+This all comes in the form of a static website which is managed through a REST
+API and chat websocket daemon written in Haskell.
 
 I use Debian (unstable).
 
-## How does it work
+## Building notes
 
-The website is a static website managed by daemon.
+This project does not use Stack. The file is only here as a hacky fix.
 
-The daemon is a REST API for managing the static website as well as managing the websocket connections for the chatting. REST API authentication is managed with JWT.
+## Project structure
 
 ### `static/`
 
 The `static/mustache-build` are literal pages to build (like copying + running through parser), whereas `static/mustache` is simply for templates that get used to build pages.
+
+## Testing
+
+...
 
 ## Running
 
@@ -41,11 +50,12 @@ You can enter the developer environment with:
 nix-shell
 ```
 
-The developer environment isn't very useful as of yet because I have to include
-various tools for testing and more, like doctests, nix cabal and ghc, nix
-Docker setup, and more. in the future, nix shell should launch db and more.
-should launch the db server, the http server, the rest api server? It's a lazy
-and sloppy implementation at the moment that just serves as a proof-of-concept.
+You can even `cabal build` inside of the `nix-shell`! The shell comes loaded
+with `haskell-langauge-server`, which you can use in combination with the
+*Haskell* and *Nix Environment Selector* VSCode/VSCodium extensions.
+
+The shell has postgres installed, but it's not set up yet (it will be!). I will
+also set up Docker.
 
 ### Running with Docker
 
