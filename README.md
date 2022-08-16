@@ -64,6 +64,8 @@ installed. This way we can be sure that we're all using the same versions and
 that it (hopefully) works regardless of our operating system (as far as all the
 tools and the project itself allows).
 
+I'm using `nix-build` and `nix-shell` v2.10.3.
+
 Build the project's daemon binary with:
 
 ```
