@@ -9,8 +9,6 @@ have an ephemeral conversation.
 This all comes in the form of a static website which is managed through a REST
 API and chat websocket daemon written in Haskell.
 
-I use Debian (unstable).
-
 `CONTRIBUTING.md` has other information on this project.
 
 ## A bonus purpose
@@ -20,66 +18,85 @@ technologies (JWT, REST, Mustache). I felt there wasn't enough Haskell and Nix
 examples, especially not well documented ones, that show by example how to
 complete something simple and practical like this project.
 
-## Building notes
-
-This project does not use Stack. The file is only here as a hacky fix.
-
 ## Project structure
+
+### Haskell Daemon
+
+The actual Haskell software which serves a REST API service as well as websocket
+for chats.
 
 ### `static/`
 
-The `static/mustache-build` are literal pages to build (like copying + running through parser), whereas `static/mustache` is simply for templates that get used to build pages.
+The `static/mustache-build` are literal pages to build (like copying + running
+through parser), whereas `static/mustache` is simply for templates that get used
+to build pages.
 
 ## Testing
 
-...
+Try running `doctest` on `src`.
 
-## Running
+## Building/setup/installation/running
 
-You will need to generate the private key for JSON Web Tokens (regardless how you run):
+This project gives you lots of options to work with when it comes to building
+and messing around with the project. The easiest is probably Nix.
+
+This project does not use Stack. The `stack.yaml` file is only here as a hacky
+fix.
+
+I use Debian (unstable).
+
+### Generate the REST API's JWT keys
+
+You will need to generate the private key for JSON Web Tokens (regardless how
+you run):
 
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
 openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
 ```
 
-### Running with `nix`
+### Using `nix`
 
-Nix implementation is somewhat incomplete, especially `nix-shell`.
+Nix gives you one command to build the project and a shell/environment, all with
+the same packages/tools/etc. at your disposal. That means you don't have to have
+anything installed or configured except for having the Nix package manager
+installed. This way we can be sure that we're all using the same versions and
+that it (hopefully) works regardless of our operating system (as far as all the
+tools and the project itself allows).
 
-You can build with:
+Build the project's daemon binary with:
 
 ```
 nix-build release.nix
 ```
 
-You can enter the developer environment with:
+#### `nix-shell`
+
+You can enter the developer environment with the command:
 
 ```
 nix-shell
 ```
 
-You can even `cabal build` inside of the `nix-shell`! The shell comes loaded
-with `haskell-langauge-server` (and `hlint`, I also want to use `ormolu` so you
-can format files using this), which you can use in combination with the
-*Haskell* and *Nix Environment Selector* VSCode/VSCodium extensions. Make sure
-you click "selected" when you get the pop up in the lower right with Nix
-Environment Selector.
+Here are some nice things about the Nix shell:
 
-The shell has postgres installed, but it's not set up yet (it will be!). I will
-also set up Docker.
+  * `cabal build`: the environment is setup with everything you need to
+    consistently build the project with a version of `cabal` it includes
+  * `haskell-langauge-server`: you can use in combination with the *Haskell* and
+    *Nix Environment Selector* VSCode/VSCodium extensions (formatter, linter,
+    documentation, suggestions, etc). Make sure you click "selected" when you
+    get the pop up in the lower right with Nix Environment Selector.
+  * `postgres`: in case you want to run a postgres server yourself (instead of
+    using Docker)
+  * `doctest`: so  you can run the doctests in `src`!
+  * `cabal2nix`: so you can easily update `default.nix` in case of any changes
+    to dependencies
+  * `docker` and `docker-compose`, so you can run those commands in the shell
+    (see this README's section on Docker)
 
-The shell also has `doctest` installed so you can run tests in the shell.
 
 There are instructions on contributing to the project while keeping Nix in mind
 in `CONTRIBUTING.md`.
-
-You may also want to use the `Nix IDE` extension.
-
-`cabal2nix` is included in the shell.
-
-The Nix shell comes with `docker` and `docker-compose`, so you can run those
-commands in the shell.
 
 ### Running with Docker
 
@@ -97,14 +114,16 @@ SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@db:5432/postgres
 DEV_VOLUME_STATIC=./static:/opt/example/static:ro
 ```
 
-This command will build all the dependencies as an image, so dependencies don't have to be built/installed/downloaded every time:
+This command will build all the dependencies as an image, so dependencies don't
+have to be built/installed/downloaded every time:
 
 ```
 docker build -f docker/Dockerfile-depends -t interwebz_depends .
 ```
 
-This command will bring in new changes to the codebase and compile, then put up the PostgreSQL service, as well as the
-API+static service (using nginx as reverse proxy):
+This command will bring in new changes to the codebase and compile, then put up
+the PostgreSQL service, as well as the API+static service (using nginx as
+reverse proxy):
 
 ```
 docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.test.yml up
@@ -115,9 +134,13 @@ Now you can visit the website using either:
   * http://localhost:8080/new-room.html
   * type in the docker ip and can use port 80 (check IP with `docker inspect idofwebcontainer`)
 
-You'll want to keep an eye on the PostgreSQL database volume, as well as the built volume (which contains room images and the static site). Try `docker volume ls`. Read more about volumes, including backing up and restoring, on [the official Docker volumes documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
+You'll want to keep an eye on the PostgreSQL database volume, as well as the
+built volume (which contains room images and the static site). Try `docker
+volume ls`. Read more about volumes, including backing up and restoring, on [the
+official Docker volumes
+documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
 
-### Running on host
+### Running on host (vanilla!)
 
 Install the depends:
 
@@ -158,11 +181,14 @@ python3 -m http.server
 
 Now you can visit http://localhost:8000/.
 
-## Known bugs
+#### Known bugs
 
 The addresses expected for the REST API vs the static directory communicating
 are shared/assume port 80 or 8080 and localhost, I think? So I need to be sure
 to make it so addresses can be configured differently. This could be resolved
 with CLI option to host `static` through the same app as REST API: https://hackage.haskell.org/package/wai-middleware-static-0.9.2/docs/Network-Wai-Middleware-Static.html
+
+You may want to also use a reverse proxy like `nginx`. The software is also sort
+of set up to expect HTTPS with the cookies.
 
 Is this actually a real issue? Test!
