@@ -11,6 +11,8 @@ API and chat websocket daemon written in Haskell.
 
 I use Debian (unstable).
 
+`CONTRIBUTING.md` has other information on this project.
+
 ## A bonus purpose
 
 This is also made to be a demo of practical Haskell and Nix, demoing common web
@@ -68,6 +70,13 @@ The shell has postgres installed, but it's not set up yet (it will be!). I will
 also set up Docker.
 
 The shell also has `doctest` installed so you can run tests in the shell.
+
+There are instructions on contributing to the project while keeping Nix in mind
+in `CONTRIBUTING.md`.
+
+You may also want to use the `Nix IDE` extension.
+
+`cabal2nix` is included in the shell.
 
 ### Running with Docker
 

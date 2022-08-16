@@ -28,6 +28,7 @@ in
      pkgs.haskell-language-server
      pkgs.haskellPackages.doctest
      pkgs.haskellPackages.ghcide
+     pkgs.cabal2nix
      #pkgs.haskellPackages.Cabal_3_6_3_0
      pkgs.cabal-install
      #pkgs.libjwt
