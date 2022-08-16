@@ -78,6 +78,9 @@ You may also want to use the `Nix IDE` extension.
 
 `cabal2nix` is included in the shell.
 
+The Nix shell comes with `docker` and `docker-compose`, so you can run those
+commands in the shell.
+
 ### Running with Docker
 
 Be sure to start by editing an env file like `.env.dev`:

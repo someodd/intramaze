@@ -1,5 +1,8 @@
 # Contributing and Repo Guidelines
 
+If you change anything be sure to check that things still build in Docker,
+`nix-build`, and `nix-shell`.
+
 ## `git`
 
 Grouping tokens (short tokens prefixing a branch name, like `tooling/nix`)
