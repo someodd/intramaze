@@ -1,0 +1,13 @@
+# Use to cache dependencies, basically, so rebuilding docker doesn't
+# take forever.
+FROM debian:bullseye
+
+WORKDIR /opt/example
+COPY . /opt/example
+
+RUN apt-get update && apt-get install -y nix-bin git
+RUN git config --global init.defaultBranch main
+RUN nix-build release.nix --verbose
+
+# FIXME: version pinning, e.g., package-foo=1.3.*   
+RUN apt-get update && apt-get install -y curl nginx certbot python3-certbot-nginx cron && rm -rf /var/lib/apt/lists/*

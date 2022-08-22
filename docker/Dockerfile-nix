@@ -1,9 +1,11 @@
-FROM interwebz_depends:latest
+# Use to cache dependencies, basically, so rebuilding docker doesn't
+# take forever.
+FROM interwebz_depends_nix:latest
 
-# In case source has changed (compared to depends).
-WORKDIR /opt/example
-COPY . /opt/example
-RUN cabal update && cabal build
+RUN nix-build release.nix --verbose
+
+# We won't run cron unless user passes SSL flag? or should we do self sign flag...?
+RUN echo "0 12 * * * /usr/bin/certbot renew --quiet" >> /etc/crontab
 
 # NGINX configuration. Eventually the haskell server will be behind nginx as well.
 RUN rm /etc/nginx/sites-enabled/default
@@ -19,7 +21,7 @@ EXPOSE 443
 #EXPOSE 3000/tcp
 
 # startup script
-RUN mv /opt/example/docker/web-startup.sh /usr/local/bin/startup.sh
+RUN mv /opt/example/docker/startup.sh /usr/local/bin/startup.sh
 RUN chmod 777 /usr/local/bin/startup.sh
 CMD /usr/local/bin/startup.sh
 #ENTRYPOINT /bin/bash
