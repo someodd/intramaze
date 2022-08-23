@@ -100,6 +100,11 @@ Here are some nice things about the Nix shell:
 There are instructions on contributing to the project while keeping Nix in mind
 in `CONTRIBUTING.md`.
 
+I noticed something strange--I had to launch `codium` via a terminal inside the
+`nix-shell` environment. Also, the nixpkgs version of `haskell-language-server`
+is not build with support for Template Haskell, which Persistent (database
+library) uses.
+
 ### Running with Docker
 
 Be sure to start by editing an env file like `.env.dev`:
