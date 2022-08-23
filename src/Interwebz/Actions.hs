@@ -113,7 +113,7 @@ postUserLoginA = do
 postTestRequire :: Action
 postTestRequire = do
   (t :: JsonRequests.Token) <- jsonData
-  userClaims <- jwtRequire t (\uc -> JWT.userId uc == (let (Just uuid) = UUID.fromString "4efeb8a5-d6a9-4f4a-8f0b-7950fbce9636" in uuid)) "not the user I'm looking for!"
+  userClaims <- JsonRequests.jwtRequire t (\uc -> JWT.userId uc == (let (Just uuid) = UUID.fromString "4efeb8a5-d6a9-4f4a-8f0b-7950fbce9636" in uuid)) "not the user I'm looking for!"
   json $ "it worked! " ++ show userClaims
 
 

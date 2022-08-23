@@ -150,3 +150,12 @@ newtype Token = Token ByteString.ByteString deriving (Generic, Show)
 instance Aeson.FromJSON Token where
     parseJSON (Aeson.String v) = Token . TSE.encodeUtf8 <$> pure v
     parseJSON _ = mzero
+
+
+-- | Require some boolean property of the UserClaims.
+jwtRequire :: Token  -> (UserClaims -> Bool) -> String -> ActionT Middle.ApiError ConfigM (Either String UserClaims)
+jwtRequire token jwtSucceedCondition failString = do
+  userClaims <- getUserClaims token
+  if jwtSucceedCondition userClaims
+    then pure $ Right userClaims
+    else pure $ Left failString

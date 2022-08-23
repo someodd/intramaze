@@ -4,14 +4,18 @@ Could be called API, but not sure. The idea of this module is to declutter Actio
 
 This helps keep Actions.hs nice and to the point with which endpoints it is offering.
 
-Might get merged into Middle?
+Might get merged into Middle.
 -}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Interwebz.ActionHelpers where
+module Interwebz.ActionHelpers
+  ( createUserProfile
+  , generateRoom
+  , toKey
+  ) where
 
 import Interwebz.Models (RowUUID, Key (..), EntityField (..))
 import Web.Scotty.Trans (ActionT)
@@ -22,8 +26,6 @@ import qualified Database.Persist.Class as DB
 import Interwebz.Static (getUserRooms, buildProfile, createNewRoom)
 import qualified Database.Persist as DB
 import Database.Persist (Entity(..))
-import qualified Interwebz.JsonRequests as JsonRequests
-import Interwebz.JWT
 import qualified Database.Persist.Sql as DB
 
 
@@ -60,16 +62,6 @@ generateRoom uuid = do
     Just roomPath -> do
       path <- liftIO roomPath
       pure $ Just path
-
-
--- FIXME: does this belong in jsonrequests or jwt?
--- | Require some boolean property of the UserClaims.
-jwtRequire :: JsonRequests.Token  -> (UserClaims -> Bool) -> String -> ActionT Middle.ApiError ConfigM (Either String UserClaims)
-jwtRequire token jwtSucceedCondition failString = do
-  userClaims <- JsonRequests.getUserClaims token
-  if jwtSucceedCondition userClaims
-    then pure $ Right userClaims
-    else pure $ Left failString
 
 
 -- FIXME: belongs somewhere else
