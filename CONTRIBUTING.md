@@ -3,6 +3,11 @@
 If you change anything be sure to check that things still build in Docker,
 `nix-build`, and `nix-shell`.
 
+## Documentation
+
+  * https://kowainik.github.io/posts/haddock-tips
+  * https://haskell-haddock.readthedocs.io/en/latest/
+
 ## `git`
 
 Grouping tokens (short tokens prefixing a branch name, like `tooling/nix`)

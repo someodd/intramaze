@@ -1,32 +1,32 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {- | API for managing the website as well as helpers for Actions.
 
-Could be called API, but not sure. The idea of this module is to declutter Actions.hs.
+Could be called API, but not sure. The idea of this module is to declutter
+Actions.hs.
 
-This helps keep Actions.hs nice and to the point with which endpoints it is offering.
+This helps keep Actions.hs nice and to the point with which endpoints it is
+offering.
 
 Might get merged into Middle.
 -}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Interwebz.ActionHelpers
   ( createUserProfile
   , generateRoom
   , toKey
   ) where
 
-import Interwebz.Models (RowUUID, Key (..), EntityField (..))
-import Web.Scotty.Trans (ActionT)
-import qualified Interwebz.Middle as Middle
 import Control.Monad.IO.Class (liftIO)
-import Interwebz.Config (ConfigM(..))
-import qualified Database.Persist.Class as DB
-import Interwebz.Static (getUserRooms, buildProfile, createNewRoom)
+import Database.Persist (Entity (..))
 import qualified Database.Persist as DB
-import Database.Persist (Entity(..))
 import qualified Database.Persist.Sql as DB
+import Interwebz.Config (ConfigM (..))
+import qualified Interwebz.Middle as Middle
+import Interwebz.Models (EntityField (..), Key (..), RowUUID)
+import Interwebz.Static (buildProfile, createNewRoom, getUserRooms)
+import Web.Scotty.Trans (ActionT)
 
 
 -- | Abstraction for creating a profile for a specific user.
@@ -39,17 +39,20 @@ createUserProfile rowUuid = do
   maybeAccount <- Middle.runDB (DB.get (AccountKey rowUuid))
   case maybeAccount of
     Nothing ->
-      Middle.jsonResponse $ Middle.ApiError 404 Middle.ResourceNotFound $ "Attempted to update the profile belonging to user of id " ++ show rowUuid ++ ", but no such user ID exists in database."
+      Middle.jsonResponse
+        $ Middle.ApiError 404 Middle.ResourceNotFound
+        $ "Attempted to update the profile belonging to user of id " ++ show rowUuid ++ ", but no such user ID exists in database."
     Just account -> do
       liftIO $ buildProfile (account, rooms)
 
 
--- | Static generation of a room based off the RowUUID.
---
--- The return value is "Maybe FilePath" instead of simply "FilePath," because
--- no room by the supplied `uuid` may exist!
---
--- Helper function.
+{- | Static generation of a room based off the RowUUID.
+
+The return value is "Maybe FilePath" instead of simply "FilePath," because no
+room by the supplied `uuid` may exist!
+
+Helper function.
+-}
 generateRoom
   :: RowUUID
   -- ^ UUID of the room.
@@ -64,8 +67,13 @@ generateRoom uuid = do
       pure $ Just path
 
 
--- FIXME: belongs somewhere else
--- NOTE: I don't understand the fromIntegral/Integer bit of this function. 
--- Doesn't it already know it's an integer, since that's in the function's signature?
+{- | From row ID (`Integer`) to another Persistent key type.
+
+May be moved to another module in the future.
+
+>>> import Interwebz.Models (PortalId)
+>>> toKey 1 :: PortalId
+PortalKey {unPortalKey = SqlBackendKey {unSqlBackendKey = 1}}
+-}
 toKey :: DB.ToBackendKey DB.SqlBackend a => Integer -> DB.Key a
 toKey i = DB.toSqlKey (fromIntegral (i :: Integer))
