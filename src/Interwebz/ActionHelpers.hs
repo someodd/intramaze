@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 {- | API for managing the website as well as helpers for Actions.
 
@@ -16,17 +17,48 @@ module Interwebz.ActionHelpers
   ( createUserProfile
   , generateRoom
   , toKey
+  , UsernamePassword(..)
+  , mustBeRoomAuthorOrRoot'
+  , mustBeRoomAuthorOrRoot
+  , Action
+  , needRoot
+  , buildEverything
+  , mustMatchUuidOrRoot
+  , notFoundA
   ) where
 
+import Network.HTTP.Types.Status (notFound404, status404, status403)
 import Control.Monad.IO.Class (liftIO)
 import Database.Persist (Entity (..))
 import qualified Database.Persist as DB
 import qualified Database.Persist.Sql as DB
+import Web.Scotty.Trans (ActionT, param, status, finish, json)
+import Data.Text.Lazy (Text)
+import GHC.Generics (Generic)
+import Data.Aeson (FromJSON(..), Value (Null))
+
+import Interwebz.Models
 import Interwebz.Config (ConfigM (..))
 import qualified Interwebz.Middle as Middle
-import Interwebz.Models (EntityField (..), Key (..), RowUUID)
-import Interwebz.Static (buildProfile, createNewRoom, getUserRooms)
-import Web.Scotty.Trans (ActionT)
+import Interwebz.Static (buildProfile, createNewRoom, getUserRooms, buildProfilePages, setupEssentials)
+import qualified Interwebz.JsonRequests as JsonRequests
+import Interwebz.JWT (UserClaims(..))
+
+
+-- TODO: `Action a`?
+-- | The default kind of action we use throughout the source.
+type Action = ActionT Middle.ApiError ConfigM ()
+
+
+{- | Just for ease-of-use for jsonData.
+
+This makes handling certain actions which use a username and password easier.
+-}
+data UsernamePassword = UsernamePassword
+  { username :: Text
+  , password :: Text
+  } deriving (Generic, Show)
+instance FromJSON UsernamePassword where
 
 
 -- | Abstraction for creating a profile for a specific user.
@@ -67,6 +99,22 @@ generateRoom uuid = do
       pure $ Just path
 
 
+{- | Create everything for the static site.
+
+Returns all the paths built.
+
+May be moved to the `Interwebz.Static` module soon.
+
+-}
+buildEverything :: ActionT Middle.ApiError ConfigM [FilePath]
+buildEverything = do
+  (roomKeySelection :: [DB.Key Room]) <- Middle.runDB (DB.selectKeysList [] [])
+  profilePaths <- buildProfilePages
+  paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
+  builtStaticPaths <- liftIO setupEssentials
+  pure $ [p | Just p <- paths] ++ builtStaticPaths ++ profilePaths
+
+
 {- | From row ID (`Integer`) to another Persistent key type.
 
 May be moved to another module in the future.
@@ -77,3 +125,88 @@ PortalKey {unPortalKey = SqlBackendKey {unSqlBackendKey = 1}}
 -}
 toKey :: DB.ToBackendKey DB.SqlBackend a => Integer -> DB.Key a
 toKey i = DB.toSqlKey (fromIntegral (i :: Integer))
+
+
+{- THESE AREN'T USED? BUT SHOULD BE? for modifying when room changes need to be made by the room's author. actually i have mustBeRoomAuthorOrRoot
+
+getRoomAuthor :: RowUUID -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError AccountId)
+getRoomAuthor rowUuid = do
+  m <- Middle.runDB (DB.get (RoomKey rowUuid))
+  case m of
+    Nothing -> pure . Left $ Middle.ApiError 404 Middle.ResourceNotFound $ "Room by the ID " ++ show rowUuid ++ " cannot be found."
+    Just t -> pure $ Right $ roomAuthor (t :: Room)
+
+
+{- | Fetch the author of a room (specified by `RowUUID`).
+
+Returns an error if there supplied UUID does not correspond to any room in the
+database.
+-}
+getRoomAuthor' :: RowUUID -> ActionT Middle.ApiError ConfigM AccountId
+getRoomAuthor' rowUuid = getRoomAuthor rowUuid >>= JsonRequests.failLeft
+-}
+
+
+{- | Ensures that the specified UUID matches the JWT, or that the JWT
+authenticates the user as having root privileges.
+
+The request's JWT must belong to the user as specified by the `RowUUID`, or the
+request will fail with an API error.
+
+-}
+mustMatchUuidOrRoot :: RowUUID -> ActionT Middle.ApiError ConfigM ()
+mustMatchUuidOrRoot rowUuid = do
+    userClaims <- JsonRequests.getUserClaimsOrFail
+    if RowUUID (userId userClaims) == rowUuid || isRoot userClaims
+      then pure ()
+      else do
+        _ <- error "wtf"
+        status status403
+        json $ Middle.ApiError 403 Middle.PermissionFailure "Must be the user of the profile attempting to update or root to perform this action."
+        finish
+
+
+-- FIXME: why duplicate? maybe this should be nested into mustBeRoomAuthorOrRoot' and use nicer names
+mustBeRoomAuthorOrRoot :: RowUUID -> UserClaims -> ActionT Middle.ApiError ConfigM Room
+mustBeRoomAuthorOrRoot rowUuid userClaims = do
+    m <- Middle.runDB $ DB.get (RoomKey rowUuid)
+    case m of
+      Nothing -> do
+          status status404
+          finish
+      Just room -> do
+          -- FIXME: need to rename roomuuid to MyUUID
+          if roomAuthor room == (AccountKey . RowUUID $ userId userClaims) || isRoot userClaims
+              then pure room
+              else do
+                  status status403
+                  json $ Middle.ApiError 403 Middle.PermissionFailure "Must be author or root to perform this action."
+                  finish
+
+
+-- FIXME: belongs in JsonRequests
+-- | Handles getting a room  (from request) if we are the author (or root) according to the generic
+-- room request, or an error is provided.
+mustBeRoomAuthorOrRoot' :: ActionT Middle.ApiError ConfigM (RowUUID, Room)
+mustBeRoomAuthorOrRoot' = do
+    i <- param "id"
+    (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
+    let userClaims = JsonRequests.genericRoomRequestValidatedUserClaims createRoomValidated
+        room = JsonRequests.genericRoomRequestValidatedRoom createRoomValidated
+    _ <- mustBeRoomAuthorOrRoot i userClaims
+    pure (i, room)
+
+
+-- | Perform an `Action` if the `UserClaims` have the `root` property.
+needRoot :: UserClaims -> String -> Action -> Action
+needRoot userClaims errorMessage action = do
+  if isRoot userClaims
+    then action
+    else Middle.jsonResponse $ Middle.ApiError 403 Middle.PermissionFailure errorMessage
+
+
+-- | Generic 404.
+notFoundA :: Action
+notFoundA = do
+  status notFound404
+  json Null

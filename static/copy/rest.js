@@ -151,7 +151,7 @@ async function getRoom (uuid) {
  */
 async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */
-    const response = await restApiRequest('users/login', 'POST', {username: username, password: password})
+    const response = await restApiRequest('users/token', 'GET', {username: username, password: password})
     console.log(response);
     return response;
 }

@@ -44,6 +44,7 @@ import qualified Interwebz.Actions as Actions
 import Interwebz.Config
 import Interwebz.Static (setupEssentials)
 import Interwebz.Database (createDefaultAdmin)
+import qualified Interwebz.ActionHelpers as ActionHelpers
 
 
 main :: IO ()
@@ -220,22 +221,20 @@ application c = do
   -- Portals.
   -- FIXME: the endpoint should look like /rooms/:id/portals, but it's not because the JSON serializer
   -- gets confused because it expects `belongsTo` so we just made the endpoint `/portals`!
-  post "/portals" Actions.postPortalsA
+  post "/portals" Actions.postPortalA
   delete "/portals/:id" Actions.deletePortalsA
   get "/rooms/:id/portals" Actions.getRoomsPortalsA
   get "/portals" Actions.getPortalsA
 
   -- user authorization
-  get "/users/generate" Actions.getGenerateProfiles
-  get "/users/:id/generate" Actions.getGenerateSpecificProfile
+  get "/users/generate" Actions.getGenerateProfilesA
+  get "/users/:id/generate" Actions.getGenerateSpecificProfileA
   get "/users/whoami" Actions.getWhoamiA 
   post "/users" Actions.postUserA
-  post "/users/login" Actions.postUserLoginA
-  -- FIXME: this is a test
-  post "/testrequire" Actions.postTestRequire
+  get "/users/token" Actions.getUserTokenA
 
   -- rest...
-  notFound Actions.notFoundA
+  notFound ActionHelpers.notFoundA
   --initialize
 
 
@@ -246,7 +245,7 @@ loggingM Test = id
 
 
 -- | Something something!
-defaultH :: Environment -> Middle.ApiError -> Actions.Action
+defaultH :: Environment -> Middle.ApiError -> ActionHelpers.Action
 defaultH e x = do
   status internalServerError500
   let o = case e of
