@@ -19,7 +19,7 @@ in
    systemPackages = [pkgs.postgresql];
 
    nativeBuildInputs = [
-     pkgs.haskell-language-server
+     pkgs.haskellPackages.haskell-language-server
      pkgs.haskellPackages.doctest
      pkgs.docker-compose
      pkgs.docker
