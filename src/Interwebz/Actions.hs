@@ -8,9 +8,6 @@ These functions (`Web.Scotty.Trans.ActionT` [actions]) are mapped to various
 routes in another module. Note how they start with an HTTP verb and end in
 'A'.
 
-Note
-
-I will move websocket stuff.
 -}
 module Interwebz.Actions (
   getWhoamiA,
