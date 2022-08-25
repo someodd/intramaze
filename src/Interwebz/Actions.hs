@@ -168,13 +168,9 @@ getRoomGenerateA :: Action
 getRoomGenerateA = do
   (i :: RowUUID) <- param "id"
   (_ :: UserClaims) <- JsonRequests.getUserClaimsOrFail
-  roomPathMaybe <- generateRoom i
-  case roomPathMaybe of
-    Nothing ->
-      notFoundA
-    Just path -> do
-      status created201
-      json path
+  roomPath <- generateRoom i
+  status created201
+  json roomPath
 
 {- | REST endpoint for creating the static HTML files for ALL the
 rooms/portals/entire site, as well as essential files.

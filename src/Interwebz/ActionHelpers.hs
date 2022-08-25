@@ -77,23 +77,25 @@ createUserProfile rowUuid = do
 
 {- | Static generation of a room based off the RowUUID.
 
-The return value is "Maybe FilePath" instead of simply "FilePath," because no
-room by the supplied `uuid` may exist!
+The return value is the file path to the directory belonging to the generated
+room.
+
+API 404 error if specified UUID doesn't exist.
 
 Helper function.
 -}
 generateRoom ::
   -- | UUID of the room.
   RowUUID ->
-  ActionT Middle.ApiError ConfigM (Maybe FilePath)
+  ActionT Middle.ApiError ConfigM FilePath
 generateRoom uuid = do
   roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
   portals <- Middle.runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
   case roomMaybe >>= \room -> Just $ createNewRoom uuid room [entityVal portal | portal <- portals] of
-    Nothing -> pure Nothing
-    Just roomPath -> do
-      path <- liftIO roomPath
-      pure $ Just path
+    Nothing -> do
+      notFoundA
+      finish
+    Just roomPath -> liftIO roomPath
 
 {- | Create everything for the static site.
 
@@ -107,7 +109,7 @@ buildEverything = do
   profilePaths <- buildProfilePages
   paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
   builtStaticPaths <- liftIO setupEssentials
-  pure $ [p | Just p <- paths] ++ builtStaticPaths ++ profilePaths
+  pure $ paths ++ builtStaticPaths ++ profilePaths
 
 {- | From row ID (`Integer`) to another Persistent key type.
 
