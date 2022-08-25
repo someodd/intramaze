@@ -3,6 +3,10 @@
 If you change anything be sure to check that things still build in Docker,
 `nix-build`, and `nix-shell`.
 
+## Style
+
+  * Use Fourmolo for formatting
+
 ## Documentation
 
   * https://kowainik.github.io/posts/haddock-tips
