@@ -45,7 +45,6 @@ import qualified Interwebz.JsonRequests as JsonRequests
 import Interwebz.JWT (UserClaims(..))
 
 
--- TODO: `Action a`?
 -- | The default kind of action we use throughout the source.
 type Action = ActionT Middle.ApiError ConfigM ()
 
@@ -127,26 +126,6 @@ toKey :: DB.ToBackendKey DB.SqlBackend a => Integer -> DB.Key a
 toKey i = DB.toSqlKey (fromIntegral (i :: Integer))
 
 
-{- THESE AREN'T USED? BUT SHOULD BE? for modifying when room changes need to be made by the room's author. actually i have mustBeRoomAuthorOrRoot
-
-getRoomAuthor :: RowUUID -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError AccountId)
-getRoomAuthor rowUuid = do
-  m <- Middle.runDB (DB.get (RoomKey rowUuid))
-  case m of
-    Nothing -> pure . Left $ Middle.ApiError 404 Middle.ResourceNotFound $ "Room by the ID " ++ show rowUuid ++ " cannot be found."
-    Just t -> pure $ Right $ roomAuthor (t :: Room)
-
-
-{- | Fetch the author of a room (specified by `RowUUID`).
-
-Returns an error if there supplied UUID does not correspond to any room in the
-database.
--}
-getRoomAuthor' :: RowUUID -> ActionT Middle.ApiError ConfigM AccountId
-getRoomAuthor' rowUuid = getRoomAuthor rowUuid >>= JsonRequests.failLeft
--}
-
-
 {- | Ensures that the specified UUID matches the JWT, or that the JWT
 authenticates the user as having root privileges.
 
@@ -166,7 +145,13 @@ mustMatchUuidOrRoot rowUuid = do
         finish
 
 
--- FIXME: why duplicate? maybe this should be nested into mustBeRoomAuthorOrRoot' and use nicer names
+{- | Handles getting a room  (from request) if we are the author (or root)
+according to the generic room request, or an error is provided.
+
+Errors on failed JWT permission, otherwise returns the requested room UUID and
+the room itself.
+
+-}
 mustBeRoomAuthorOrRoot :: RowUUID -> UserClaims -> ActionT Middle.ApiError ConfigM Room
 mustBeRoomAuthorOrRoot rowUuid userClaims = do
     m <- Middle.runDB $ DB.get (RoomKey rowUuid)
@@ -184,9 +169,10 @@ mustBeRoomAuthorOrRoot rowUuid userClaims = do
                   finish
 
 
--- FIXME: belongs in JsonRequests
--- | Handles getting a room  (from request) if we are the author (or root) according to the generic
--- room request, or an error is provided.
+{- | Same as `mustBeRoomAuthorOrRoot`, but the `JWT` and room UUID is taken from
+the request.
+
+-}
 mustBeRoomAuthorOrRoot' :: ActionT Middle.ApiError ConfigM (RowUUID, Room)
 mustBeRoomAuthorOrRoot' = do
     i <- param "id"
