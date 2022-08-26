@@ -102,6 +102,8 @@ in `CONTRIBUTING.md`.
 
 ### Running with Docker
 
+This is subject to change because I'll likely just have Docker use `nix`.
+
 Be sure to start by editing an env file like `.env.dev`:
 
 ```

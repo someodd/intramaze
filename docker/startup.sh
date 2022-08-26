@@ -21,4 +21,4 @@ cron
 
 # ... the rest!
 service nginx start
-cabal run
+./result/bin/Interwebz
