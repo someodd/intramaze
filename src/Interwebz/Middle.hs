@@ -28,6 +28,7 @@ import qualified Data.UUID as UUID
 import Interwebz.Models (RowUUID(RowUUID))
 import Slug (Slug, SlugException (..), parseSlug)
 import Control.Monad.Catch (try)
+import qualified Control.Monad.Reader as Control.Monad.Trans.Reader
 
 
 -- FIXME: rename to ApiFailure?
@@ -161,6 +162,22 @@ catcher e (ExclusionViolation _) =
     500
     DatabaseExclusionViolation
     (show e)
+
+
+{-}
+runDbNoScotty
+  :: DB.SqlPersistT IO a
+  -> ActionT ApiError ConfigM a
+-}
+runDbNoScotty :: Control.Monad.Trans.Reader.ReaderT DB.SqlBackend IO a -> IO a
+runDbNoScotty q = do
+  conf <- getConfig
+  p <- pure $ pool conf
+  --p <- lift (asks pool)
+  s <- liftIO $ fmap Right $ DB.runSqlPool q p
+  case s of
+    Left ae -> pure ae
+    Right a -> pure a
 
 
 runDB

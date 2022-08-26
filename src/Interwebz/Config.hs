@@ -13,6 +13,11 @@ The Environmental Environment Configuration System
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use newtype instead of data" #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Interwebz.Config
     (
     -- * Configuration for Scotty
@@ -20,6 +25,8 @@ module Interwebz.Config
       Config(..)
     , ConfigM(..)
     , Environment(..)
+    , getConfig
+    , getOptions
     -- * Envvar-defined Config System
     -- $envvarConfigSys
     , AppEnvConfig(..)
@@ -32,6 +39,12 @@ import Control.Monad.Reader (MonadReader, ReaderT)
 import qualified Data.Text as T
 import System.Environment (lookupEnv)
 import qualified Database.Persist.Postgresql as DB
+import Web.Scotty.Internal.Types (Options(..))
+import Network.Wai.Handler.Warp (Settings, defaultSettings, setFdCacheDuration, setPort)
+import Data.Default (def)
+import Data.Text.Encoding (encodeUtf8)
+import Web.Heroku (parseDatabaseUrl)
+import Control.Monad.Logger (runStdoutLoggingT, NoLoggingT (runNoLoggingT))
 
 
 -- | The mode the application will run under. Depending on such a mode various settings will be used (different database, verbosity, etc.).
@@ -99,6 +112,108 @@ getAppEnvConfig = do
   lookupEnvPrefixed s = do
       maybeEnvValue <- lookupEnv . (appEnvConfPrefix ++) $ s
       pure maybeEnvValue
+
+
+
+getPool :: Environment -> AppEnvConfig -> IO DB.ConnectionPool
+getPool e appEnvConf = do
+  let s = getConnectionString e appEnvConf
+  let n = getConnectionSize e
+  case e of
+    Development -> runStdoutLoggingT (DB.createPostgresqlPool s n)
+    Production -> runStdoutLoggingT (DB.createPostgresqlPool s n)
+    Test -> runNoLoggingT (DB.createPostgresqlPool s n)
+
+
+getConfig :: IO Config
+getConfig = do
+  e <- getEnvironment
+  aec <- getAppEnvConfig
+  p <- getPool e aec
+  return Config
+    { environment = e
+    , appEnvConfig = aec
+    , pool = p
+    }
+
+
+-- FIXME: redundant considering `appEnvConfig`.
+getEnvironment :: IO Environment
+getEnvironment = do
+  m <- lookupEnv "SCOTTY_ENV"
+  let e = case m of
+        Nothing -> Development
+        Just s -> read s
+  return e
+
+                                                                                                                                                                                
+getConnectionString :: Environment -> AppEnvConfig -> DB.ConnectionString
+getConnectionString e appEnvConf = do
+  -- FIXME: should derive from app env config
+  --m <- lookupEnv "DATABASE_URL"
+  let m = confDatabaseUrl appEnvConf
+  case m of
+    Nothing -> getDefaultConnectionString e
+    Just u -> createConnectionString (parseDatabaseUrl u)
+    -- above used to be `createConnectionString (parseDatabaseUrl u)`, but it's broken! maybe pointless? for parsing what we expect for a string... oh i guess it's because it expects a URI?!
+
+
+-- FIXME: why would this EVER be handy? do not even bother! delete soon!
+-- FIXME: I just changed this from localhost to "db"
+getDefaultConnectionString :: Environment -> DB.ConnectionString
+getDefaultConnectionString Development =
+  "host=db port=5432 user=postgres dbname=Interwebz_development"
+getDefaultConnectionString Production =
+  "host=db port=5432 user=postgres dbname=Interwebz_production"
+getDefaultConnectionString Test =
+  "host=db port=5432 user=testpguser password=testpguser dbname=postgres"
+
+
+createConnectionString :: [(T.Text, T.Text)] -> DB.ConnectionString
+createConnectionString l =
+  let f (k, v) = T.concat [k, "=", v]
+  in  encodeUtf8 (T.unwords (map f l))
+
+
+getConnectionSize :: Environment -> Int
+getConnectionSize Development = 1
+getConnectionSize Production = 8
+getConnectionSize Test = 1
+
+getOptions :: Environment -> IO Options
+getOptions e = do
+  s <- getSettings e
+  return def
+    { settings = s
+    , verbose = case e of
+      Development -> 1
+      Production -> 0
+      Test -> 0
+    }
+
+-- should i set cors here?
+getSettings :: Environment -> IO Settings
+getSettings e = do
+  let s = defaultSettings
+      s' = case e of
+        Development -> setFdCacheDuration 0 s
+        Production -> s
+        Test -> s
+  m <- getPort'
+  let s'' = case m of
+        Nothing -> s'
+        Just p -> setPort p s'
+  return s''
+
+
+getPort' :: IO (Maybe Int)
+getPort' = do
+  -- FIXME: should come from AEC
+  m <- lookupEnv "PORT"
+  let p = case m of
+        Nothing -> Nothing
+        Just s -> Just (read s)
+  return p
 
 
 {-
