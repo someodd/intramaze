@@ -3,9 +3,34 @@
 If you change anything be sure to check that things still build in Docker,
 `nix-build`, and `nix-shell`.
 
+Try to stay within the `nix-shell` to keep all of our environments the same.
+
+Here are some nice things about the Nix shell:
+
+  * `cabal build`: the environment is setup with everything you need to
+    consistently build the project with a version of `cabal` it includes
+  * `haskell-langauge-server`: you can use in combination with the *Haskell* and
+    *Nix Environment Selector* VSCode/VSCodium extensions (formatter, linter,
+    documentation, suggestions, etc). Make sure you click "selected" when you
+    get the pop up in the lower right with Nix Environment Selector.
+  * `postgres`: in case you want to run a postgres server yourself (instead of
+    using Docker)
+  * `doctest`: so  you can run the doctests in `src`!
+  * `cabal2nix`: so you can easily update `default.nix` in case of any changes
+    to dependencies
+  * `docker` and `docker-compose`, so you can run those commands in the shell
+    (see this README's section on Docker)
+
+If you're contributing to this project I'd prefer you to do so within
+`nix-shell` and use `nix-build` before you push a commit.
+
+For your editor to use the tools in `nix-shell`, simply launch the editor in the
+`nix-shell`. For example, I had to launch `codium` via a terminal inside the
+`nix-shell` environment.
+
 ## Style
 
-  * Use Fourmolo for formatting
+  * Use Fourmolo for formatting. Please see this repo's `fourmolu.yaml`.
 
 ## Documentation
 

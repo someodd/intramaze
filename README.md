@@ -80,30 +80,9 @@ You can enter the developer environment with the command:
 nix-shell
 ```
 
-Here are some nice things about the Nix shell:
-
-  * `cabal build`: the environment is setup with everything you need to
-    consistently build the project with a version of `cabal` it includes
-  * `haskell-langauge-server`: you can use in combination with the *Haskell* and
-    *Nix Environment Selector* VSCode/VSCodium extensions (formatter, linter,
-    documentation, suggestions, etc). Make sure you click "selected" when you
-    get the pop up in the lower right with Nix Environment Selector.
-  * `postgres`: in case you want to run a postgres server yourself (instead of
-    using Docker)
-  * `doctest`: so  you can run the doctests in `src`!
-  * `cabal2nix`: so you can easily update `default.nix` in case of any changes
-    to dependencies
-  * `docker` and `docker-compose`, so you can run those commands in the shell
-    (see this README's section on Docker)
-
-
-There are instructions on contributing to the project while keeping Nix in mind
-in `CONTRIBUTING.md`.
-
-I noticed something strange--I had to launch `codium` via a terminal inside the
-`nix-shell` environment. Also, the nixpkgs version of `haskell-language-server`
-is not build with support for Template Haskell, which Persistent (database
-library) uses.
+If you're contributing to this project I'd prefer you to do so within
+`nix-shell`. For more information on how this project uses `nix-shell`, please
+see `CONTRIBUTING.md`.
 
 ### Running with Docker
 
