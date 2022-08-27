@@ -47,7 +47,9 @@ import Web.Heroku (parseDatabaseUrl)
 import Control.Monad.Logger (runStdoutLoggingT, NoLoggingT (runNoLoggingT))
 
 
--- | The mode the application will run under. Depending on such a mode various settings will be used (different database, verbosity, etc.).
+{- | The mode the application will run under. Depending on such a mode various
+settings will be used (different database, verbosity, etc.).
+-}
 data Environment
   = Development
   | Production
@@ -55,10 +57,11 @@ data Environment
   deriving (Eq, Read, Show)
 
 
--- | The main configuration records. This is used in a complicated manner with a Scotty monad transformer so the configuration can be read
--- wherever.
---
--- Related: `ConfigM`
+{- | The main configuration records. This is used in a complicated manner with a
+Scotty monad transformer so the configuration can be read wherever.
+
+Related: `ConfigM`
+-}
 data Config = Config
   { environment :: Environment -- FIXME: shouldn't this be in appenvconfig?!
   , pool :: DB.ConnectionPool
@@ -66,7 +69,9 @@ data Config = Config
   }
 
 
--- | See `Config`
+{- | See `Config`. 
+
+-}
 newtype ConfigM a = ConfigM
  { runConfigM :: ReaderT Config IO a
  } deriving (Applicative, Functor, Monad, MonadIO, MonadReader Config)
