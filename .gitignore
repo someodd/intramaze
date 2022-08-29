@@ -4,3 +4,5 @@ built/
 .env*
 result/
 result
+.tmp/
+logfile

@@ -76,6 +76,8 @@ Build the project's daemon binary with:
 nix-build release.nix
 ```
 
+It should output the binary to `./result/bin/Interwebz`.
+
 #### `nix-shell`
 
 Enter the developer environment with the command:
@@ -93,7 +95,7 @@ fix, if I remember correctly, for Nixpkgs.
 For more information on how this project uses `nix-shell`, please see
 `CONTRIBUTING.md`.
 
-### Running with Docker
+### Running it all with Docker
 
 Be sure to start by editing an env file like `.env.dev`:
 
@@ -137,13 +139,50 @@ documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
 
 ### Running on host (vanilla!)
 
-Install the depends:
+This section is devoted to demonstrating how you can set up the server yourself.
+
+Install the depends (you can skip this if you use `nix-shell`):
 
 ```
 sudo apt install libjwt zlib1g-dev postgresql postgresql-contrib libpq-dev libjwt-dev
 ```
 
-Setup PostgreSQL:
+#### 1. Postgres
+
+There are three different options for running a Postgres daemon (for the database).
+
+I apologize for the messiness of this section. I will consolidate and clean up
+this information in the future. 
+
+##### Postgres in `nix-shell`
+
+You can run a developer/local test Postgres database like this with `nix-shell`:
+
+```
+[nix-shell:~/Projects/Interwebz]$ initdb -D .tmp/mydb
+...
+[nix-shell:~/Projects/Interwebz]$ pg_ctl -D .tmp/mydb -o "-k /tmp" -l logfile start
+waiting for server to start.... done
+server started
+[nix-shell:~/Projects/Interwebz]$ psql -p 5432 -h localhost -e postgres
+psql (14.4)
+Type "help" for help.
+
+postgres=# CREATE USER testpguser with PASSWORD 'testpguser';
+CREATE USER testpguser with PASSWORD 'testpguser';
+CREATE ROLE
+postgres=# CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
+CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
+CREATE DATABASE
+```
+
+You can stop Postgres with `pg_ctl -D .tmp/mydb stop`.
+
+##### Postgres without `nix-shell`
+
+Even without `nix-shell` you can still use the same commands from the *Postgres in `nix-shell`* section. However, this demonstrates a more typical setup.
+
+Setup PostgreSQL normally (no `nix-shell`):
 
 ```
 sudo -u postgres psql
@@ -151,23 +190,33 @@ CREATE USER testpguser with PASSWORD 'testpguser';
 CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
 ```
 
-... Of course if you just wanted to use the Docker PostgreSQL setup instead of
-the above block you could do the below:
+##### Postgres using Docker
+
+If you just wanted to use the Docker PostgreSQL setup instead of the above for
+Postgres you could do the below:
 
 ```
 docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.test.yml start db
 ```
 
-Run the backend:
+#### 2. Run the backend
+
+Run with Cabal:
 
 ```shell
 env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/postgres cabal run
 ```
 
+You can also run using the binary built by `nix-build`:
+
+```shell
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase ./result/bin/Interwebz
+```
+
 The above will build the static files and run the REST API, which both manages
 the database and handles updating the static files.
 
-Serve the built static files directory (here's a way to test):
+Finally, serve the built static files directory (here's a way to test):
 
 ```
 cd built
