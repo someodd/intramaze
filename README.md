@@ -144,17 +144,18 @@ This section is devoted to demonstrating how you can set up the server yourself.
 Install the depends (you can skip this if you use `nix-shell`):
 
 ```
-sudo apt install libjwt zlib1g-dev postgresql postgresql-contrib libpq-dev libjwt-dev
+sudo apt install libjwt zlib1g-dev libpq-dev libjwt-dev
 ```
 
 #### 1. Postgres
 
 There are three different options for running a Postgres daemon (for the database).
 
-I apologize for the messiness of this section. I will consolidate and clean up
-this information in the future. 
+I apologize for the messiness of this section. I will consolidate (there's not
+much of a difference between the `nix-shell` commands and other method as I am
+making it out to be at the moment) and clean up this information in the future.
 
-##### Postgres in `nix-shell`
+##### Postgres in `nix-shell` (for dev/testing)
 
 You can run a developer/local test Postgres database like this with `nix-shell`:
 
@@ -178,19 +179,18 @@ CREATE DATABASE
 
 You can stop Postgres with `pg_ctl -D .tmp/mydb stop`.
 
-##### Postgres without `nix-shell`
+##### Postgres without `nix-shell` (production)
 
-Even without `nix-shell` you can still use the same commands from the *Postgres in `nix-shell`* section. However, this demonstrates a more typical setup.
-
-Setup PostgreSQL normally (no `nix-shell`):
+Even without `nix-shell` you can still use the same commands from the *Postgres in `nix-shell`* section. However, this demonstrates a more typical setup that might be more suited to a production environment.
 
 ```
+sudo apt install postgresql postgresql-contrib
 sudo -u postgres psql
 CREATE USER testpguser with PASSWORD 'testpguser';
 CREATE DATABASE testpgdatabase WITH OWNER=testpguser;
 ```
 
-##### Postgres using Docker
+##### Postgres using Docker (production)
 
 If you just wanted to use the Docker PostgreSQL setup instead of the above for
 Postgres you could do the below:
@@ -204,7 +204,7 @@ docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.t
 Run with Cabal:
 
 ```shell
-env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/postgres cabal run
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase cabal run
 ```
 
 You can also run using the binary built by `nix-build`:
