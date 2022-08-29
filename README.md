@@ -2,34 +2,41 @@
 
 Random chat encounters in a collaboratively-built maze.
 
-A maze made out of rooms users have made and arbitrarily linked together.
-Explore the maze, if you bump into the other users in the same room you can
-have an ephemeral conversation.
+Rooms arbitrarily linked together using portals. Navigate the maze of rooms by
+going through portals. If users are in the same room they can communicate with
+each other using an ephemeral instant chat system.
 
-This all comes in the form of a static website which is managed through a REST
-API and chat websocket daemon written in Haskell.
+## Technical high-level
+
+This project is built in such a way to exemplify webdev in Haskell, while still
+being a practical project used in a production setting. Here's a high level of
+the parts of the application:
+
+  * Daemon: built with Haskell. The daemon serves both the websocket server for
+    the chat system, as well as a REST API for updating the static website.
+    Handles authentication (JWT), management of the database, management of the
+    static website.
+  * Static website: The maze itself, which is produced and managed by the
+    daemon. The static website has a lot of JavaScript which among other things
+    is responsible for communicating with the REST API in order to access
+    database information, authorization, and more things that can't simply be
+    written once into a static website.
 
 `CONTRIBUTING.md` has other information on this project.
 
-## A bonus purpose
+No matter how you build or run this project, please try to use `nix-shell` and
+`nix-build`. Please read the *Using `nix`* section below. In part, I aimed to
+show off the helpfulness and usage of Nix.
 
-This is also made to be a demo of practical Haskell and Nix, demoing common web
-technologies (JWT, REST, Mustache). I felt there wasn't enough Haskell and Nix
-examples, especially not well documented ones, that show by example how to
-complete something simple and practical like this project.
+### The `static/` directory
 
-## Project structure
+The static website is actually built to `built/`. The files in `static` are
+static files used in building the site.
 
-### Haskell Daemon
-
-The actual Haskell software which serves a REST API service as well as websocket
-for chats.
-
-### `static/`
-
-The `static/mustache-build` are literal pages to build (like copying + running
-through parser), whereas `static/mustache` is simply for templates that get used
-to build pages.
+  * `static/mustache-build` are literal pages to build (like copying + running
+    through parser)
+  * `static/mustache` is simply for templates that get used to build pages.
+  * `static/copy` are files that only get copied to `built/` and nothing else
 
 ## Testing
 
@@ -40,12 +47,9 @@ Try running `doctest` on `src`.
 This project gives you lots of options to work with when it comes to building
 and messing around with the project. The easiest is probably Nix.
 
-This project does not use Stack. The `stack.yaml` file is only here as a hacky
-fix.
-
 I use Debian (unstable).
 
-### Generate the REST API's JWT keys
+### ALWAYS: Generate the REST API's JWT keys
 
 You will need to generate the private key for JSON Web Tokens (regardless how
 you run):
@@ -74,15 +78,20 @@ nix-build release.nix
 
 #### `nix-shell`
 
-You can enter the developer environment with the command:
+Enter the developer environment with the command:
 
 ```
 nix-shell
 ```
 
-If you're contributing to this project I'd prefer you to do so within
-`nix-shell`. For more information on how this project uses `nix-shell`, please
-see `CONTRIBUTING.md`.
+You'll then be inside of an environment which gives you the same tools (Docker,
+GHC, formatters, cabal, etc.) that I use.
+
+It may seem like I use Stack, but the `stack.yaml` file is only here as a hacky
+fix, if I remember correctly, for Nixpkgs.
+
+For more information on how this project uses `nix-shell`, please see
+`CONTRIBUTING.md`.
 
 ### Running with Docker
 
@@ -167,7 +176,7 @@ python3 -m http.server
 
 Now you can visit http://localhost:8000/.
 
-#### Known bugs
+#### Known bugs running without Docker
 
 The addresses expected for the REST API vs the static directory communicating
 are shared/assume port 80 or 8080 and localhost, I think? So I need to be sure
@@ -176,5 +185,3 @@ with CLI option to host `static` through the same app as REST API: https://hacka
 
 You may want to also use a reverse proxy like `nginx`. The software is also sort
 of set up to expect HTTPS with the cookies.
-
-Is this actually a real issue? Test!

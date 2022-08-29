@@ -3,6 +3,8 @@
 If you change anything be sure to check that things still build in Docker,
 `nix-build`, and `nix-shell`.
 
+If you are contributing, please work within `nix-shell`.
+
 Try to stay within the `nix-shell` to keep all of our environments the same.
 
 Here are some nice things about the Nix shell:
