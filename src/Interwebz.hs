@@ -32,6 +32,7 @@ import Web.Scotty.Trans (Options, ActionT, ScottyT, defaultHandler,
 import qualified Network.Wai.Handler.WebSockets as WaiWs
 import Control.Monad (when)
 import Network.WebSockets.Connection (pingThread)
+import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import Interwebz.ChatWebSocket (ServerState)
 import qualified Interwebz.Middle as Middle
 import qualified Interwebz.Actions as Actions
@@ -94,6 +95,12 @@ initialize = do
 application :: Config -> ScottyT Middle.ApiError ConfigM ()
 application c = do
   let e = environment c
+
+  -- Only serve static files if testing server.
+  if e == Test
+    then middleware $ staticPolicy $ addBase "built/"
+    else middleware id  -- Is this inefficient?
+
   middleware (loggingM e)
   -- FIXME: this doesn't belong here and shouldn't always be enabled. delete this! only should be enabled on develop mode
   middleware $ cors (const . Just $ simpleCorsResourcePolicy {corsMethods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"], corsRequestHeaders=["Authorization", "Content-Type"]})
@@ -147,7 +154,7 @@ defaultH e x = do
   json o
 
 
--- old wsapp
+-- old wsapp... delete?
 wsapp :: WS.ServerApp
 wsapp pending = do
   putText "ws connected"

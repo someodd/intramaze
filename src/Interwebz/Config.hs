@@ -1,12 +1,3 @@
-{- | Application configuration.
-
-This module not only defines settings directly, but also provides a system for defining
-configuration settings, like through environmental variables, and more configuration-related
-activities.
-
-The Environmental Environment Configuration System
--}
-
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -18,6 +9,18 @@ The Environmental Environment Configuration System
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
+
+{- | Application configuration.
+
+This module not only defines settings directly, but also provides a system for
+defining configuration settings, like through environmental variables, and more
+configuration-related activities.
+
+Scotty also has a lot of configuration expectations, like how the config being
+baked into the Scotty transmonad so the config, pool, can be accessed from any
+action.
+
+-}
 module Interwebz.Config
     (
     -- * Configuration for Scotty
@@ -77,36 +80,42 @@ newtype ConfigM a = ConfigM
  } deriving (Applicative, Functor, Monad, MonadIO, MonadReader Config)
 
 
--- | Environmental variables which allow the app to be easily configured.
---
--- Constructed by `getAppEnvConfig`.
+{- | Environmental variables which allow the app to be easily configured.
+
+Constructed by `getAppEnvConfig`.
+-}
 data AppEnvConfig = AppEnvConfig
   { confSiteTitle :: Maybe T.Text 
   -- ^ The site title allows the static site builder to incorporate it as a Mustache variable as
   -- {{confSiteTitle}}.
-  -- , conf
   , confDatabaseUrl :: Maybe String
   -- ^ The connection string used to connect to the PostgreSQL database. The format is
   -- postgres://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]...
   } deriving (Show)
 
 
--- | Whitelists record lookup functions belonging to `AppEnvConfig`, mapping them to a label which shall be used
--- for Mustache {{variable}} substitutions. Effectively in the form of (key/label, lookup function).
+{- | Whitelists record lookup functions belonging to `AppEnvConfig`, mapping
+them to a label which shall be used for Mustache {{variable}} substitutions.
+Effectively in the form of (key/label, lookup function).
+
+-}
 appEnvConfigWhitelist :: [(T.Text, AppEnvConfig -> Maybe T.Text)]
 appEnvConfigWhitelist =
     [ ("siteTitle", confSiteTitle)
     ]
 
 
--- | This prefix is used before all AppEnvConfig envvars (see `getAppEnvConfig`).
+{- | This prefix is used before all AppEnvConfig envvars (see `getAppEnvConfig`).
+
+-}
 appEnvConfPrefix :: String
 appEnvConfPrefix = "SCOTTY_"
 
 
--- | Create the raw application configuration records by reading environmental variables.
---
--- An example use is using envvars to set 
+{- | Create the raw application configuration records by reading environmental variables.
+
+An example use is using envvars to set
+-}
 getAppEnvConfig :: IO AppEnvConfig
 getAppEnvConfig = do
   AppEnvConfig

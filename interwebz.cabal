@@ -97,6 +97,7 @@ library
         wai-websockets==3.0.1.2,
         warp==3.3.21,
         websockets==0.12.7.3,
+        wai-middleware-static==0.9.2,
     ghc-options: -Wall -Werror
     exposed-modules:
         Interwebz.JWT
