@@ -130,7 +130,7 @@ application c = do
   get "/users/:id/generate" Actions.getGenerateSpecificProfileA
   get "/users/whoami" Actions.getWhoamiA 
   post "/users" Actions.postUserA
-  get "/users/token" Actions.getUserTokenA
+  post "/users/token" Actions.postUserTokenA
 
   -- rest...
   notFound ActionHelpers.notFoundA

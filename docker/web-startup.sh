@@ -4,7 +4,7 @@
 # certificate? I think so!
 # FIXME: these commands should only be ran once! don't overwrite...
 echo "what the heck"
-if [ "$SCOTTY_ENV" = "Test" ]; then
+if [ "$SCOTTY_ENV" != "Production" ]; then
 mkdir -p /etc/letsencrypt/live/interwebz.earth/
     #certbot --nginx -d interwebz.earth --test-cert --no-verify-ssl --non-interactive --agree-tos -m someodd@pm.me
 openssl req -x509 -out /etc/letsencrypt/live/interwebz.earth/fullchain.crt -keyout /etc/letsencrypt/live/interwebz.earth/privkey.pem \

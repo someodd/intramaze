@@ -252,6 +252,10 @@ the daemon to run in `Test` mode, which will handle serving the static files for
 us--the server will run on `8888`, you can now visit
 [http://localhost:8888/login.html](http://localhost:8888/login.html).
 
+Note that if you are using the Docker postgres setup you'll want to use
+`SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/postgres`
+instead. I don't know why (some Docker Compose Postgres image thing, maybe).
+
 #### Vanilla step 3: serve the static files
 
 You can skip this step if you're running the daemon in `Test` mode, as described

@@ -12,7 +12,7 @@ routes in another module. Note how they start with an HTTP verb and end in
 module Interwebz.Actions (
   getWhoamiA,
   postUserA,
-  getUserTokenA,
+  postUserTokenA,
   getRoomsA,
   postRoomsA,
   getRoomGenerateA,
@@ -107,8 +107,8 @@ postUserA = do
   catcher e t = Middle.catcher e t
 
 -- | Return a JWT from the provided username and password, or return an error.
-getUserTokenA :: Action
-getUserTokenA = do
+postUserTokenA :: Action
+postUserTokenA = do
   (t :: UsernamePassword) <- jsonData
   (accountEntities :: [DB.Entity Account]) <- Middle.runDB (DB.rawSql "SELECT ?? FROM \"account\" WHERE username = ? AND password = crypt(?, password);" [DB.PersistText . TL.toStrict $ username t, DB.PersistText . TL.toStrict $ password t])
   case accountEntities of

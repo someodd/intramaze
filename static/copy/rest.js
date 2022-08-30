@@ -9,9 +9,13 @@
 
 /**
  * The host used for all REST API requests.
+ *
+ * Reserved for in the future where there may be multiple versions of the API.
+ * For example, `/api/v1`.
+ *
  * @type {String}
  */
- const restApiHost = "/api/";
+ const restApiHost = "/";
 
 
 // FIXME: weirdly on the serverside if you request ..//room/whatever you'll get some kind of response? makes bugs confusing.
@@ -151,7 +155,7 @@ async function getRoom (uuid) {
  */
 async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */
-    const response = await restApiRequest('users/token', 'GET', {username: username, password: password})
+    const response = await restApiRequest('users/token', 'POST', {username: username, password: password})
     console.log(response);
     return response;
 }

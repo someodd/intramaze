@@ -176,7 +176,7 @@ getConnectionString e appEnvConf = do
 -- FIXME: I just changed this from localhost to "db"
 getDefaultConnectionString :: Environment -> DB.ConnectionString
 getDefaultConnectionString Development =
-  "host=db port=5432 user=postgres dbname=Interwebz_development"
+  "host=db port=5432 user=testpguser password=testpguser dbname=postgres"
 getDefaultConnectionString Production =
   "host=db port=5432 user=postgres dbname=Interwebz_production"
 getDefaultConnectionString Test =
