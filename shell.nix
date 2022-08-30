@@ -28,6 +28,7 @@ in
      pkgs.cabal-install
      pkgs.postgresql
      pkgs.postgresql.lib
+     pkgs.simplehttp2server
    ];
 
    # set environment variable, so the development version of
