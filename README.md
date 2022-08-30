@@ -70,8 +70,8 @@ Here are some various options for running the daemon:
 Here are some various options for serving the static files:
 
   * Let Docker handle it
-  * Use `simplehttp2server` from `nix-shell` (preferred/great for dev/testing, includes HTTPS support!)
-  * Use `python3 -m http.server` (dev/testing)
+  * Use `Test` mode which will enable the daemon to serve the static files
+  * Use something like `simplehttp2server` or `python3 -m http.server` (dev/testing)
   * Your favorite HTTP daemon configured yourself (nginx, apache)
   * Some sort of newfangled "cloud" service
 
@@ -237,61 +237,29 @@ docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.t
 Run with Cabal:
 
 ```shell
-env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase cabal run
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase cabal run
 ```
 
 You can also run using the binary built by `nix-build`:
 
 ```shell
-env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase ./result/bin/Interwebz
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase ./result/bin/Interwebz
 ```
 
 The above will build the static files and run the REST API, which both manages
-the database and handles updating the static files.
+the database and handles updating the static files. The above command also tells
+the daemon to run in `Test` mode, which will handle serving the static files for
+us--the server will run on `8888`, you can now visit
+[http://localhost:8888/login.html](http://localhost:8888/login.html).
 
 #### Vanilla step 3: serve the static files
+
+You can skip this step if you're running the daemon in `Test` mode, as described
+in *Vanilla step 2: run the daemon*.
 
 The last step is to serve `built/` static files directory. For production it's
 recommended you use something like nginx, Apache, or some kind of cloud service.
 This section will only cover local development.
 
-#### Using `simplehttp2server` (preferred!)
-
-This method is preferred because it's simple and it handles HTTPS!
-
-You can install
-[`simplehttp2server`](https://github.com/GoogleChromeLabs/simplehttp2server)
-yourself, *or* you can use `nix-shell` where it is already installed for you!
-
-Either way you'll want to:
-
-```
-cd built
-simplehttp2server
-```
-
-You'll notice some `.pem` files are created--they're used for HTTPS.
-
-You should now be able to visit [https://localhost:5000](https://localhost:5000).
-
-#### Using Python
-
-This method is *not* preferred, but you probably already have `python3`
-installed on your system.
-
-```
-cd built
-python3 -m http.server
-```
-
-Now you can visit [http://localhost:8000/](http://localhost:8000/).
-
-#### Known bugs running without Docker
-
-The addresses expected for the REST API vs the static directory communicating
-are shared/assume port 80 or 8080 and localhost, I think? So I need to be sure
-to make it so addresses can be configured differently. This could be resolved
-with CLI option to host `static` through the same app as REST API: https://hackage.haskell.org/package/wai-middleware-static-0.9.2/docs/Network-Wai-Middleware-Static.html
-
-You may want to also use a reverse proxy like `nginx`. The software is also sort
-of set up to expect HTTPS with the cookies.
+You can also use something like `simplehttp2server` or `python3 -m http.server`
+to serve the `built/` directory (for testing and debugging).
