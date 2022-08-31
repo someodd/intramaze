@@ -1,4 +1,4 @@
--- | REST API and web socket server converge here.
+-- | REST API and web socket server converge here. The scotty app...
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -98,7 +98,7 @@ initialize = do
 -- | Prefixes a route with the /api/v[n] prefix
 --api :: (Web.Scotty.Internal.Types.RoutePattern -> ActionT Middle.ApiError ConfigM () -> ScottyT Middle.ApiError ConfigM ()) -> Web.Scotty.Internal.Types.RoutePattern -> ScottyT Middle.ApiError ConfigM ()
 api :: (Web.Scotty.Internal.Types.RoutePattern -> t1 -> t2) -> [Char] -> t1 -> t2
-api method route action = method (Web.Scotty.Internal.Types.Capture . pack $ "/api/" ++ show restApiVersionMajor ++ route :: Web.Scotty.Internal.Types.RoutePattern) action
+api method route action = method (Web.Scotty.Internal.Types.Capture . pack $ "/api/v" ++ show restApiVersionMajor ++ route :: Web.Scotty.Internal.Types.RoutePattern) action
 
 
 application :: Config -> ScottyT Middle.ApiError ConfigM ()
