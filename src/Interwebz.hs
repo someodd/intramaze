@@ -40,6 +40,9 @@ import Interwebz.Config
 import Interwebz.Static (setupEssentials)
 import Interwebz.Database (createDefaultAdmin)
 import qualified Interwebz.ActionHelpers as ActionHelpers
+import qualified Web.Scotty as Web.Scotty.Internal.Types
+import qualified Web.Scotty.Internal.Types
+import Data.Text.Lazy (pack)
 
 
 main :: IO ()
@@ -92,6 +95,12 @@ initialize = do
   createDefaultAdmin
 
 
+-- | Prefixes a route with the /api/v[n] prefix
+--api :: (Web.Scotty.Internal.Types.RoutePattern -> ActionT Middle.ApiError ConfigM () -> ScottyT Middle.ApiError ConfigM ()) -> Web.Scotty.Internal.Types.RoutePattern -> ScottyT Middle.ApiError ConfigM ()
+api :: (Web.Scotty.Internal.Types.RoutePattern -> t1 -> t2) -> [Char] -> t1 -> t2
+api method route action = method (Web.Scotty.Internal.Types.Capture . pack $ "/api/" ++ show restApiVersionMajor ++ route :: Web.Scotty.Internal.Types.RoutePattern) action
+
+
 application :: Config -> ScottyT Middle.ApiError ConfigM ()
 application c = do
   let e = environment c
@@ -107,30 +116,30 @@ application c = do
   defaultHandler (defaultH e)
   -- Rooms
   -- TODO: patch room? or will i always be doing put...
-  get "/rooms" Actions.getRoomsA
-  post "/rooms" Actions.postRoomsA
-  get "/rooms/:id" Actions.getRoomA
-  patch "/rooms/:id" Actions.patchRoomA
-  get "/rooms/search" Actions.getRoomSearchA
-  get "/rooms/:id/generate" Actions.getRoomGenerateA
-  get "/generate" Actions.getGenerateEverythingA
-  put "/rooms/:id" Actions.putRoomA
-  post "/rooms/:id/image" Actions.postRoomsImageA
-  delete "/rooms/:id" Actions.deleteRoomA
+  api get "/rooms" Actions.getRoomsA
+  api post "/rooms" Actions.postRoomsA
+  api get "/rooms/:id" Actions.getRoomA
+  api patch "/rooms/:id" Actions.patchRoomA
+  api get "/rooms/search" Actions.getRoomSearchA
+  api get "/rooms/:id/generate" Actions.getRoomGenerateA
+  api get "/generate" Actions.getGenerateEverythingA
+  api put "/rooms/:id" Actions.putRoomA
+  api post "/rooms/:id/image" Actions.postRoomsImageA
+  api delete "/rooms/:id" Actions.deleteRoomA
   -- Portals.
   -- FIXME: the endpoint should look like /rooms/:id/portals, but it's not because the JSON serializer
   -- gets confused because it expects `belongsTo` so we just made the endpoint `/portals`!
-  post "/portals" Actions.postPortalA
-  delete "/portals/:id" Actions.deletePortalsA
-  get "/rooms/:id/portals" Actions.getRoomsPortalsA
-  get "/portals" Actions.getPortalsA
+  api post "/portals" Actions.postPortalA
+  api delete "/portals/:id" Actions.deletePortalsA
+  api get "/rooms/:id/portals" Actions.getRoomsPortalsA
+  api get "/portals" Actions.getPortalsA
 
   -- user authorization
-  get "/users/generate" Actions.getGenerateProfilesA
-  get "/users/:id/generate" Actions.getGenerateSpecificProfileA
-  get "/users/whoami" Actions.getWhoamiA 
-  post "/users" Actions.postUserA
-  post "/users/token" Actions.postUserTokenA
+  api get "/users/generate" Actions.getGenerateProfilesA
+  api get "/users/:id/generate" Actions.getGenerateSpecificProfileA
+  api get "/users/whoami" Actions.getWhoamiA 
+  api post "/users" Actions.postUserA
+  api post "/users/token" Actions.postUserTokenA
 
   -- rest...
   notFound ActionHelpers.notFoundA

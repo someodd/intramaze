@@ -7,7 +7,7 @@
  */
 
 
-/**
+/** somevalue: {{siteTitle}}
  * The host used for all REST API requests.
  *
  * Reserved for in the future where there may be multiple versions of the API.
@@ -15,7 +15,7 @@
  *
  * @type {String}
  */
- const restApiHost = "/";
+ const restApiHost = "/api/v{{restApiVersionMajor}}/";
 
 
 // FIXME: weirdly on the serverside if you request ..//room/whatever you'll get some kind of response? makes bugs confusing.

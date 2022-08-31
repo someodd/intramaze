@@ -35,6 +35,8 @@ module Interwebz.Config
     , AppEnvConfig(..)
     , getAppEnvConfig
     , appEnvConfigWhitelist
+    -- * Module-defined configuration constants
+    , restApiVersionMajor
     ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -94,6 +96,11 @@ data AppEnvConfig = AppEnvConfig
   } deriving (Show)
 
 
+-- | The major version of the REST API.
+restApiVersionMajor :: Int
+restApiVersionMajor = 0
+
+
 {- | Whitelists record lookup functions belonging to `AppEnvConfig`, mapping
 them to a label which shall be used for Mustache {{variable}} substitutions.
 Effectively in the form of (key/label, lookup function).
@@ -102,6 +109,7 @@ Effectively in the form of (key/label, lookup function).
 appEnvConfigWhitelist :: [(T.Text, AppEnvConfig -> Maybe T.Text)]
 appEnvConfigWhitelist =
     [ ("siteTitle", confSiteTitle)
+    , ("restApiVersionMajor", const (Just . T.pack . show $ restApiVersionMajor))
     ]
 
 

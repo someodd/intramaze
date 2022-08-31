@@ -62,6 +62,7 @@ getInstructions someInput = --parseYamlFrontmatterMaybe
     --Fail {} -> Nothing
 
 
+-- FIXME: does this error if a mustache-build has no parent?
 -- FIXME: this isn't quite right! the replacements are a bit fucked... should pass [(text, a)] oh i am...
 -- i wanted to use ToMustache a, but then I'd be limited to only providing the same thing over and over and that sucks.
 -- FIXME/NOTE: do we actually want filePath to just use getFile in searchSpace?
@@ -101,7 +102,8 @@ parseMustacheChild searchSpace filePath substitutions' = do
       -- should just use render/parse or something instead? FIXME
       plainRender childText
   where
-   plainRender text = flip substitute (H.fromList [] :: H.HashMap T.Text M.Value) <$> neoTextCompile searchSpace text
+   -- This used to have blank substitutions []. I don't know why. Hopefully I didn't break anything by adding all the substitutions. 
+   plainRender text = flip substitute (H.fromList substitutions' :: H.HashMap T.Text M.Value) <$> neoTextCompile searchSpace text
 
 
 -- FIXME: would be even better if you could override the template cache for not
