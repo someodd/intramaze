@@ -85,6 +85,9 @@ instance ScottyError ApiError where
 -- FIXME: use a helper function to get error description?
 -- hopefully generally these are reusable and not just for one specific instance. although sometimes that's unavoidable.
 -- almost a category of error?
+{- | Consistent error names, which are especially useful to match against on the JavaScript end.
+
+-}
 data ErrorName
   = DatabaseUniqueViolation
   | DatabaseNotNullViolation

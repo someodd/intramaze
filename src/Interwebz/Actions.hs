@@ -51,7 +51,7 @@ import qualified Interwebz.JWT as JWT (makeToken)
 import qualified Interwebz.JsonRequests as JsonRequests
 import qualified Interwebz.Middle as Middle
 import Interwebz.Models (Account (..), EntityField (..), Key (..), Portal (portalBelongsTo), PortalId, Room (..), RowUUID (..), Unique (..))
-import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage)
+import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage, generateRoom)
 import Network.HTTP.Types.Status (created201, status204)
 import Network.Wai.Parse (FileInfo (..))
 import Web.Scotty.Trans (

@@ -18,6 +18,20 @@ import Interwebz.Config (ConfigM(..))
 import Data.Text (Text)
 
 
+-- FIXME: could also use Either!
+entityToRowUuid :: DB.PersistEntity a => DB.Entity a -> ActionT Middle.ApiError ConfigM RowUUID
+entityToRowUuid (DB.Entity someId _)= do
+  matchText . head $ keyToValues someId
+ where
+  matchText :: PersistValue -> ActionT Middle.ApiError ConfigM RowUUID
+  matchText (PersistLiteral_ Escaped t) = do
+    case UUID.fromString $ BSU.toString t of
+      Nothing -> Middle.jsonResponse $ Middle.ApiError 500 Middle.UuidParseFailure "Database UUID somehow failed to be parsed as a UUID!"
+      Just uuid -> pure . RowUUID $ uuid
+  matchText e = Middle.jsonResponse $ Middle.ApiError 500 Middle.ResourceNotFound $ " I was looking for a UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key changing or similar."
+
+
+-- FIXME: redundant because of entityToRowUuid
 -- | Helper function to parse/get the `RowUUID` from a account entity.
 accountEntityToUuid :: DB.Entity Account -> Either (Middle.ErrorName, String) (RowUUID, Account)
 accountEntityToUuid accountEntity = do

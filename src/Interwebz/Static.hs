@@ -1,3 +1,4 @@
+-- FIXME: should not use the scotty trans monad. this will make cli stuff easier. just pass the data directly
 -- | Builds the static site from the database and other static site generator related things.
 
 {-# LANGUAGE OverloadedStrings #-}
@@ -5,7 +6,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile) where
+module Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile, generateRoom, createAllRooms) where
 
 import GHC.Generics ( Generic )
 import qualified Data.Vector as Vector (fromList)
@@ -30,11 +31,8 @@ import qualified Database.Persist.Sql as DB
 import Web.Scotty.Trans (ActionT)
 import Interwebz.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
-import qualified Data.UUID as UUID
-import Database.Persist (keyToValues, LiteralType (Escaped))
-import Database.Persist.PersistValue (PersistValue(..))
-import qualified Data.ByteString.UTF8 as BSU
-import Interwebz.Database (accountEntityToUuid)
+import Database.Persist (Entity (entityVal))
+import Interwebz.Database (accountEntityToUuid, entityToRowUuid)
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -209,10 +207,34 @@ createRoomImage rowUuid fileContent fileName = do
 
 
 -- TODO: Generate all rooms from DB.
---createAllRooms = do
---  allRooms :: [DB.Entity Room] <- Middle.runDB (DB.selectList [] []) need to also select ids
---  traverse (\row -> createNewRoom (roomId row) row)
+createAllRooms :: ActionT Middle.ApiError ConfigM [FilePath]
+createAllRooms = do
+  allRooms :: [DB.Entity Room] <- Middle.runDB (DB.selectList [] [])
+  traverse (\entity -> entityToRowUuid entity >>= generateRoom) allRooms
 
+
+{- | Static generation of a room based off the RowUUID.
+
+The return value is the file path to the directory belonging to the generated
+room.
+
+API 404 error if specified UUID doesn't exist.
+
+Helper function.
+
+May be refactored to be partially moved to Static or moved to Static entirely.
+-}
+generateRoom ::
+  -- | UUID of the room.
+  RowUUID ->
+  ActionT Middle.ApiError ConfigM FilePath
+generateRoom uuid = do
+  roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
+  portals <- Middle.runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
+  case roomMaybe >>= \room -> Just $ createNewRoom uuid room [entityVal portal | portal <- portals] of
+    Nothing -> do
+      Middle.jsonResponse $ Middle.ApiError 404 Middle.ResourceNotFound $ "Requested to generate a room which does not exist: " ++ show uuid
+    Just roomPath -> liftIO roomPath
 
 -- | Create the static file and directory and everything for a provided room.
 --
@@ -297,19 +319,11 @@ getUserRooms userId = do
   case rooms of
     [] -> pure []
     ens -> traverse roomEntityToRoomMustache ens
+ -- FIXME: use entityToRowUuid
  where
-  roomEntityToRoomMustache (DB.Entity roomId room) = do
-    uuid <- matchText . head $ keyToValues roomId
+  roomEntityToRoomMustache entity@(DB.Entity _ room) = do
+    uuid <- entityToRowUuid entity
     pure . RoomMustache $ (uuid, room)
-
-  -- This is so we can extract the room UUID as Text from all of the rooms matched from our database query.
-  matchText :: PersistValue -> ActionT Middle.ApiError ConfigM RowUUID
-  matchText (PersistLiteral_ Escaped t) = do
-    case UUID.fromString $ BSU.toString t of
-      Nothing -> Middle.jsonResponse $ Middle.ApiError 500 Middle.UuidParseFailure "Author UUID somehow failed to be parsed as a UUID!"
-      Just uuid -> pure . RowUUID $ uuid
-  matchText e = Middle.jsonResponse $ Middle.ApiError 500 Middle.ResourceNotFound $ "While building profiles, I was looking for a room UUID, but found " ++ show e ++ ". This is entirely the fault of the server-end code. This should only happen if the schema changed, like the type of the table key for rooms changing or similar."
-
 
 -- FIXME: this is SO messy!
 -- FIXME: this is weird because it's the only one that hits the database...

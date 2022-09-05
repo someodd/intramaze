@@ -15,7 +15,6 @@ Might get merged into Middle.
 -}
 module Interwebz.ActionHelpers (
   createUserProfile,
-  generateRoom,
   toKey,
   UsernamePassword (..),
   mustBeRoomAuthorOrRoot',
@@ -28,9 +27,8 @@ module Interwebz.ActionHelpers (
 ) where
 
 import Control.Monad.IO.Class (liftIO)
-import Data.Aeson (FromJSON (..), Value (Null))
+import Data.Aeson (FromJSON (..))
 import Data.Text.Lazy (Text)
-import Database.Persist (Entity (..))
 import qualified Database.Persist as DB
 import qualified Database.Persist.Sql as DB
 import GHC.Generics (Generic)
@@ -42,7 +40,7 @@ import Interwebz.JWT (UserClaims (..))
 import qualified Interwebz.JsonRequests as JsonRequests
 import qualified Interwebz.Middle as Middle
 import Interwebz.Models
-import Interwebz.Static (buildProfile, buildProfilePages, createNewRoom, getUserRooms, setupEssentials)
+import Interwebz.Static (buildProfile, buildProfilePages, getUserRooms, setupEssentials, generateRoom)
 
 -- | The default kind of action we use throughout the source.
 type Action = ActionT Middle.ApiError ConfigM ()
@@ -75,29 +73,7 @@ createUserProfile rowUuid = do
     Just account -> do
       liftIO $ buildProfile (account, rooms)
 
-{- | Static generation of a room based off the RowUUID.
 
-The return value is the file path to the directory belonging to the generated
-room.
-
-API 404 error if specified UUID doesn't exist.
-
-Helper function.
-
-May be refactored to be partially moved to Static or moved to Static entirely.
--}
-generateRoom ::
-  -- | UUID of the room.
-  RowUUID ->
-  ActionT Middle.ApiError ConfigM FilePath
-generateRoom uuid = do
-  roomMaybe <- Middle.runDB $ DB.get (RoomKey uuid)
-  portals <- Middle.runDB $ DB.selectList [PortalBelongsTo DB.==. RoomKey uuid] []
-  case roomMaybe >>= \room -> Just $ createNewRoom uuid room [entityVal portal | portal <- portals] of
-    Nothing -> do
-      notFoundA
-      finish
-    Just roomPath -> liftIO roomPath
 
 {- | Create everything for the static site.
 
@@ -184,4 +160,4 @@ needRoot userClaims errorMessage action = do
 notFoundA :: Action
 notFoundA = do
   status notFound404
-  json Null
+  Middle.jsonResponse $ Middle.ApiError 404 Middle.ResourceNotFound "Cannot locate requested resource."
