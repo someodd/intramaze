@@ -83,6 +83,8 @@ room.
 API 404 error if specified UUID doesn't exist.
 
 Helper function.
+
+May be refactored to be partially moved to Static or moved to Static entirely.
 -}
 generateRoom ::
   -- | UUID of the room.

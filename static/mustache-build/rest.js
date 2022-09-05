@@ -66,7 +66,7 @@ async function uploadBgImageFilename(uuid) {
     await fetch(restApiHost + `rooms/${uuid}/image`, {
         method: "POST",
         body: formData,
-        //headers: {Authorization: jwt, "Content-Type": "multipart/form-data"}
+        headers: {Authorization: jwt}
     });
     //updateBgImageFilename(uuid, image.name)
 }
@@ -136,7 +136,8 @@ async function createRoom(jwt, room) {
  */
 async function regenerateRoom(uuid) {
     // Call upon the REST API endpoint which (re)creates the static files for the room matching the supplied UUID.
-    const response = await restApiRequest(`rooms/${uuid}/generate`, 'GET');
+    const jwt = getJwtCookie();
+    const response = await restApiRequest(`rooms/${uuid}/generate`, 'GET', null, jwt);
     console.log(response);
 }
 

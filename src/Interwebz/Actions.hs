@@ -164,7 +164,7 @@ getRoomGenerateA :: Action
 getRoomGenerateA = do
   (i :: RowUUID) <- param "id"
   -- FIXME: should be room author or admin or fail
-  --(_ :: UserClaims) <- JsonRequests.getUserClaimsOrFail
+  _ :: UserClaims <- JsonRequests.getUserClaimsOrFail
   roomPath <- generateRoom i
   status created201
   json roomPath
@@ -218,14 +218,15 @@ Expects `multipart/form-data` as encoding type.
 API error if not room author or root.
 
 Returns the path to the uploaded image.
+
+Regenerates the room.
 -}
 postRoomsImageA :: Action
 postRoomsImageA = do
   roomUuid :: RowUUID <- param "id"
   -- FIXME: just because I disable the bottom two lines i can now upload files?!
   -- maybe json requests module is a really bad architecture...
-  --userClaims <- JsonRequests.getUserClaimsOrFail
-  --_ <- mustBeRoomAuthorOrRoot roomUuid userClaims
+  _ <- JsonRequests.getUserClaimsOrFail >>= mustBeRoomAuthorOrRoot roomUuid
   files' <- files
   fileInfo <- case files' of
     ("image", fileInfo') : _ -> pure fileInfo'
@@ -234,8 +235,10 @@ postRoomsImageA = do
   let imageFileName = fileName fileInfo
   Middle.runDB (DB.update (RoomKey roomUuid) [RoomBgFileName DB.=. Just (decodeUtf8 imageFileName)])
   pathToImage <- liftIO $ createRoomImage roomUuid (fileContent fileInfo) (toString imageFileName)
+  roomPath <- generateRoom roomUuid
+
   status created201
-  json pathToImage
+  json (pathToImage, roomPath)
 
 {- | Handles a request to get (some of) a specific room's data from the database.
 
