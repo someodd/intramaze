@@ -149,6 +149,7 @@ User json
 -}
 
 
+-- FIXME: make sure these are all set REQUIRED and no optional/can't be blank.
 -- would it be better if portals was field of rooms?
 --instance ToMustache Room
 

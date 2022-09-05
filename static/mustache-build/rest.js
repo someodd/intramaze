@@ -7,11 +7,15 @@
  */
 
 
-/**
+/** somevalue: {{siteTitle}}
  * The host used for all REST API requests.
+ *
+ * Reserved for in the future where there may be multiple versions of the API.
+ * For example, `/api/v1`.
+ *
  * @type {String}
  */
- const restApiHost = "/api/";
+ const restApiHost = "/api/v{{restApiVersionMajor}}/";
 
 
 // FIXME: weirdly on the serverside if you request ..//room/whatever you'll get some kind of response? makes bugs confusing.
@@ -46,8 +50,28 @@ async function restApiRequest(endpoint, method, body, jwt, headers) {
     return responseJSON;
   }
 
+// FIXME: repeating code here!
+async function updateBgImageFilename(uuid, bgFileName) {
+    const jwt = getJwtCookie();
+    const response = await restApiRequest('rooms/' + uuid, 'PATCH', {bgFileName: bgFileName}, jwt)
+    console.log(response);
+    await regenerateRoom(uuid);
+}
 
-/**
+async function uploadBgImageFilename(uuid) {
+    const jwt = getJwtCookie();
+    let formData = new FormData(); 
+    var image = document.getElementById('image').files[0];        
+    formData.append("image", image);
+    await fetch(restApiHost + `rooms/${uuid}/image`, {
+        method: "POST",
+        body: formData,
+        headers: {Authorization: jwt}
+    });
+    //updateBgImageFilename(uuid, image.name)
+}
+
+/** FIXME: this is getting description from a document query, that's very bad!
  * Update a room's description.
  * @param {String} uuid - ID of the room to update the description of.
  */
@@ -97,10 +121,10 @@ async function deleteRoom(uuid) {
 /**
  * Make a new room.
  * @param {String} jwt - authentication.
- * @param {String} description - text which shows up on the room.
+ * @param {Object} room - the room to create.
  */
-async function createRoom(jwt, description) {
-    const response = await restApiRequest('rooms', 'POST', {description: description}, jwt)
+async function createRoom(jwt, room) {
+    const response = await restApiRequest('rooms', 'POST', room, jwt)
     console.log(response)
     return response
 }
@@ -112,7 +136,8 @@ async function createRoom(jwt, description) {
  */
 async function regenerateRoom(uuid) {
     // Call upon the REST API endpoint which (re)creates the static files for the room matching the supplied UUID.
-    const response = await restApiRequest(`rooms/${uuid}/generate`, 'GET');
+    const jwt = getJwtCookie();
+    const response = await restApiRequest(`rooms/${uuid}/generate`, 'GET', null, jwt);
     console.log(response);
 }
 
@@ -151,7 +176,7 @@ async function getRoom (uuid) {
  */
 async function authenticate(username, password) {
     /** post a user login to /users/login, parse response */
-    const response = await restApiRequest('users/login', 'POST', {username: username, password: password})
+    const response = await restApiRequest('users/token', 'POST', {username: username, password: password})
     console.log(response);
     return response;
 }

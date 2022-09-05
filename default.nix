@@ -1,12 +1,12 @@
 { mkDerivation, aeson, base, bytestring, containers, cryptonite
 , data-default, dir-traverse, directory, either, exceptions
 , filepath, frontmatter, heroku, http-api-data, http-types, lib
-, libjwt, libjwt-typed, memory, monad-logger, monad-time, mtl
-, mustache, path-pieces, persistent, persistent-postgresql
-, postgresql-simple, protolude, regex-compat, scotty, text
-, text-show, time, transformers, unordered-containers, utf8-string
-, uuid, vector, wai, wai-cors, wai-extra, wai-websockets, warp
-, websockets
+, libjwt-typed, memory, monad-logger, monad-time, mtl, mustache
+, path-pieces, persistent, persistent-postgresql, postgresql-simple
+, protolude, regex-compat, scotty, text, text-show, time
+, transformers, unordered-containers, utf8-string, uuid, vector
+, wai, wai-cors, wai-extra, wai-middleware-static, wai-websockets
+, warp, websockets
 }:
 mkDerivation {
   pname = "Interwebz";
@@ -21,10 +21,9 @@ mkDerivation {
     monad-time mtl mustache path-pieces persistent
     persistent-postgresql postgresql-simple protolude regex-compat
     scotty text text-show time transformers unordered-containers
-    utf8-string uuid vector wai wai-cors wai-extra wai-websockets warp
-    websockets
+    utf8-string uuid vector wai wai-cors wai-extra
+    wai-middleware-static wai-websockets warp websockets
   ];
-  #librarySystemDepends = [ libjwt ];
   executableHaskellDepends = [ base ];
   license = "unknown";
   mainProgram = "Interwebz";

@@ -1,6 +1,9 @@
 dist-newstyle/
+static/copy/rooms/
 built/
 *.pem
 .env*
 result/
 result
+.tmp/
+logfile

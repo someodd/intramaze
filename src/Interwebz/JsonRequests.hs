@@ -1,6 +1,7 @@
 -- FIXME: maybe not just for JSON requests since validates headers too! maybe just call it
 -- "request validation."
 -- | Models for JSON requests. Defines the structure of the request and validation tools.
+-- FIXME: i guess this shouldn't be handling permissions, right? or maybe it should because validation... keep things separate?
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -10,6 +11,17 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
+
+{- | JSON request verification.
+
+Parses an expected permissive JSON data structure into a datatype which has
+fully validated the information to be safe (such as for inserting in a
+database). This includes authorization/permission checks.
+
+Verification only performs checks based off the request data provided. No checks
+are ran against the database.
+
+-}
 module Interwebz.JsonRequests where
 
 import Control.Monad (MonadPlus (mzero))
@@ -28,34 +40,77 @@ import qualified Database.Persist as DB
 import Database.Persist (Update)
 import Data.Maybe (catMaybes)
 import qualified Data.ByteString.Lazy as BL
-import Interwebz.JWT (UserClaims)
+import Interwebz.JWT (UserClaims (..))
 import qualified Data.Aeson.Types as Aeson
-import Data.Aeson ((.:))
+import Data.Text (Text)
+import Interwebz.Models (Room(..), RowUUID (..), Key (..))
 
+{- | A sloppy hack for making a version of Models.Room not require Authors so
 
--- | Many room requests (JSON) use this format.
-data GenericRoomRequestUnvalidated = GenericRoomRequestUnvalidated
-    { genericRoomRequestUnvalidatedRoom :: Models.Room
-    } deriving (Generic, Show)
-    --     } deriving (Generic, Show, Aeson.FromJSON)
+I hope to replace this witha  more elegant solution in the future.
 
+This is the request format that gets transformed into the validated "good data."
 
-instance Aeson.FromJSON GenericRoomRequestUnvalidated where
-    parseJSON (Aeson.Object v) =
-        GenericRoomRequestUnvalidated
-            <$> v .: "description"
-    parseJSON invalid = Aeson.typeMismatch "GenericRoomRequestUnvalidated" invalid
+Unvalidated room request that doesn't require anything defined.
+-}
+data RoomRequest = RoomRequest
+    { title :: Maybe Text
+    , description :: Maybe Text
+    , bgFileName :: Maybe Text
+    } deriving (Generic, Show, Aeson.FromJSON)
 
+-- | Mapping to easily transform `RoomRequest` into `Models.Room`.
+roomRequestMapping
+    :: [(RoomRequest -> Maybe Text, DB.EntityField Models.Room (Maybe Text))]
+roomRequestMapping =
+    [ (title, Models.RoomTitle)
+    , (description, Models.RoomDescription)
+    , (bgFileName, Models.RoomBgFileName)
+    ]
 
-data GenericRoomRequestValidated = GenericRoomRequestValidated
-    { genericRoomRequestValidatedRoom :: Models.Room
-    , genericRoomRequestValidatedUserClaims :: JWT.UserClaims
-    }
+{- | Built list of update operations for a `Models.Room`, validated and based
+off a request.
 
+-}
+data ValidatedRoomUpdate = ValidatedRoomUpdate JWT.UserClaims [Update Models.Room] deriving (Generic)
 
+{- | Build a series of update operations.
+
+Always requires JWT.
+
+Does not validate that the user defined in JWT has permissions to modify the
+room.
+-}
+instance ValidatedRequest RoomRequest ValidatedRoomUpdate where
+    validateRequest roomUnvalidated = do
+        userClaims <- getUserClaimsOrFail
+        let
+            -- FIXME: I feel like this should be possible with some more abstraction so
+            -- I don't need to be explicit here... some kind of trick... maybe having to
+            -- do with Persistent directly... could be pairs
+            -- should be able to use a command to get both sides?
+            (transformedList :: [Maybe (Update Models.Room)]) = map
+                (\(x,y) -> x roomUnvalidated >>= Just . (y DB.=.) . Just)
+                roomRequestMapping
+        pure . Right $ ValidatedRoomUpdate userClaims $ catMaybes transformedList
+
+-- | A full `Models.Room` which has been validated from request.
+data ValidatedRoom = ValidatedRoom Models.Room UserClaims
+
+{- | Validate a request that uses a full `Models.Room` in the request.
+
+Ensures the JWT user matches the defined room author in the request (or root).
+-}
+instance ValidatedRequest Models.Room ValidatedRoom where
+    validateRequest roomUnvalidated = do
+        userClaims <- getUserClaimsOrFail
+        if (AccountKey . RowUUID $ userId userClaims) == roomAuthor roomUnvalidated || isRoot userClaims
+            then pure . Right $ ValidatedRoom roomUnvalidated userClaims
+            else pure . Left $ Middle.ApiError 403 Middle.AuthenticationFailure $ "Unless you are root, you may not set the author field to another user. User info from JWT was " ++ show userClaims ++ ", but request specified " ++ show (roomAuthor roomUnvalidated)
 
 
 class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
+    -- FIXME: is this concept bad because it should all be done by validateRequest?
     -- NOTE: I could have just done `Either String b`, to make it so the status code can be decided later.
     -- | Turn an unvalidated request into a validated one (or error)
     validateRequest :: a -> ActionT Middle.ApiError ConfigM (Either Middle.ApiError b)
@@ -69,29 +124,6 @@ class Aeson.FromJSON a => ValidatedRequest a b | b -> a where
         t <- jsonData
         maybeValidJson <- validateRequest t
         failLeft maybeValidJson
-
-
-data RoomUpdateValidated = RoomUpdateValidated JWT.UserClaims [Update Models.Room] deriving (Generic)
-
-
-instance ValidatedRequest GenericRoomRequestUnvalidated RoomUpdateValidated where
-    validateRequest roomUnvalidated = do
-        userClaims <- getUserClaimsOrFail
-        let
-            room = genericRoomRequestUnvalidatedRoom roomUnvalidated
-            -- FIXME: I feel like this should be possible with some more abstraction so
-            -- I don't need to be explicit here... some kind of trick... maybe having to
-            -- do with Persistent directly... could be pairs
-            -- should be able to use a command to get both sides?
-            pairs =
-                [ (Models.roomTitle, Models.RoomTitle)
-                , (Models.roomDescription, Models.RoomDescription)
-                , (Models.roomBgFileName, Models.RoomBgFileName)
-                ]
-            (transformedList :: [Maybe (Update Models.Room)]) = map
-                (\(x,y) -> x room >>= Just . (y DB.=.) . Just)
-                pairs
-        pure . Right $ RoomUpdateValidated userClaims $ catMaybes transformedList
 
 
 -- FIXME: four functions that could be maybe combined?
@@ -134,15 +166,6 @@ failLeft :: Either Middle.ApiError a -> ActionT Middle.ApiError ConfigM a
 failLeft = either Middle.jsonResponse pure
 
 
-instance ValidatedRequest GenericRoomRequestUnvalidated GenericRoomRequestValidated where
-    validateRequest roomUnvalidated = do
-        userClaims <- getUserClaimsOrFail
-        let room = genericRoomRequestUnvalidatedRoom roomUnvalidated
-        pure . Right $ GenericRoomRequestValidated
-                { genericRoomRequestValidatedRoom = room
-                , genericRoomRequestValidatedUserClaims = userClaims
-                }
-
 
 -- FIXME: doesn't this already exist in JWT? why do it twice?
 newtype Token = Token ByteString.ByteString deriving (Generic, Show)
@@ -150,3 +173,12 @@ newtype Token = Token ByteString.ByteString deriving (Generic, Show)
 instance Aeson.FromJSON Token where
     parseJSON (Aeson.String v) = Token . TSE.encodeUtf8 <$> pure v
     parseJSON _ = mzero
+
+
+-- | Require some boolean property of the UserClaims.
+jwtRequire :: Token  -> (UserClaims -> Bool) -> String -> ActionT Middle.ApiError ConfigM (Either String UserClaims)
+jwtRequire token jwtSucceedCondition failString = do
+  userClaims <- getUserClaims token
+  if jwtSucceedCondition userClaims
+    then pure $ Right userClaims
+    else pure $ Left failString

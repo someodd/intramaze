@@ -84,7 +84,7 @@ head: |
             <p>Replace the current room graphic.</p>
         </header>
         <!-- needs to also regenerate the room and delete portals for this room, so should have javascript override, or just make room regen a part of image upload -->
-        <form class="to-be-described bar-of-items" action="http://localhost:3000/rooms/{{room.id}}/image" method="POST" enctype="multipart/form-data" id="form">
+        <form class="to-be-described bar-of-items" onsubmit="uploadBgImageFilename('{{room.id}}')" id="form">
             <input type="file" name="image" class="bar-of-items-focus" />
             <input type="submit" value="upload image" class="button bar-of-items-aside" />
         </form>

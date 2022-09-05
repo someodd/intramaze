@@ -1,4 +1,4 @@
--- | REST API and web socket server converge here.
+-- | REST API and web socket server converge here. The scotty app...
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -13,10 +13,8 @@ import Network.Wai.Middleware.Cors
 import Protolude (putText, threadDelay, forever, forkIO)
 import qualified Network.WebSockets as WS
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Logger (runNoLoggingT, runStdoutLoggingT)
 import Control.Monad.Reader (runReaderT)
 import Data.Aeson (Value (Null), (.=), object)
-import Data.Default (def)
 import qualified Data.Text as T
 --import Data.Text.Encoding (encodeUtf8, decodeUtf8)  
 import qualified Database.Persist.Postgresql as DB
@@ -25,11 +23,8 @@ import qualified Interwebz.ChatWebSocket as CWS (application, newServerState)
 import Control.Concurrent (MVar, newMVar)
 import Network.HTTP.Types.Status (internalServerError500)
 import Network.Wai (Middleware, Response)
-import Network.Wai.Handler.Warp (Settings, defaultSettings,
-    setFdCacheDuration, setPort, runSettings, getPort)
+import Network.Wai.Handler.Warp (runSettings, getPort)
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
-import System.Environment (lookupEnv)
-import Web.Heroku (parseDatabaseUrl)
 import Web.Scotty.Trans (Options, ActionT, ScottyT, defaultHandler,
     get, json, middleware, notFound, post,
     settings, showError, status, verbose, put, delete, patch, scottyAppT)
@@ -37,13 +32,17 @@ import Web.Scotty.Trans (Options, ActionT, ScottyT, defaultHandler,
 import qualified Network.Wai.Handler.WebSockets as WaiWs
 import Control.Monad (when)
 import Network.WebSockets.Connection (pingThread)
+import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import Interwebz.ChatWebSocket (ServerState)
 import qualified Interwebz.Middle as Middle
-import Data.Text.Encoding as TSE
 import qualified Interwebz.Actions as Actions
 import Interwebz.Config
 import Interwebz.Static (setupEssentials)
 import Interwebz.Database (createDefaultAdmin)
+import qualified Interwebz.ActionHelpers as ActionHelpers
+import qualified Web.Scotty as Web.Scotty.Internal.Types
+import qualified Web.Scotty.Internal.Types
+import Data.Text.Lazy (pack)
 
 
 main :: IO ()
@@ -58,72 +57,6 @@ migrateSchema :: Config -> IO ()
 migrateSchema c = do
   liftIO $ flip DB.runSqlPersistMPool (pool c) $ DB.runMigration migrateAll
   liftIO $ flip DB.runSqlPersistMPool (pool c) $ DB.runMigration $ DB.migrateEnableExtension "pgcrypto"
-
-
-getConfig :: IO Config
-getConfig = do
-  e <- getEnvironment
-  aec <- getAppEnvConfig
-  p <- getPool e aec
-  return Config
-    { environment = e
-    , appEnvConfig = aec
-    , pool = p
-    }
-
-
--- FIXME: redundant considering `appEnvConfig`.
-getEnvironment :: IO Environment
-getEnvironment = do
-  m <- lookupEnv "SCOTTY_ENV"
-  let e = case m of
-        Nothing -> Development
-        Just s -> read s
-  return e
-
-
-getPool :: Environment -> AppEnvConfig -> IO DB.ConnectionPool
-getPool e appEnvConf = do
-  let s = getConnectionString e appEnvConf
-  let n = getConnectionSize e
-  case e of
-    Development -> runStdoutLoggingT (DB.createPostgresqlPool s n)
-    Production -> runStdoutLoggingT (DB.createPostgresqlPool s n)
-    Test -> runNoLoggingT (DB.createPostgresqlPool s n)
-
-                                                                                                                                                                                
-getConnectionString :: Environment -> AppEnvConfig -> DB.ConnectionString
-getConnectionString e appEnvConf = do
-  -- FIXME: should derive from app env config
-  --m <- lookupEnv "DATABASE_URL"
-  let m = confDatabaseUrl appEnvConf
-  case m of
-    Nothing -> getDefaultConnectionString e
-    Just u -> createConnectionString (parseDatabaseUrl u)
-    -- above used to be `createConnectionString (parseDatabaseUrl u)`, but it's broken! maybe pointless? for parsing what we expect for a string... oh i guess it's because it expects a URI?!
-
-
--- FIXME: why would this EVER be handy? do not even bother! delete soon!
--- FIXME: I just changed this from localhost to "db"
-getDefaultConnectionString :: Environment -> DB.ConnectionString
-getDefaultConnectionString Development =
-  "host=db port=5432 user=postgres dbname=Interwebz_development"
-getDefaultConnectionString Production =
-  "host=db port=5432 user=postgres dbname=Interwebz_production"
-getDefaultConnectionString Test =
-  "host=db port=5432 user=testpguser password=testpguser dbname=postgres"
-
-
-createConnectionString :: [(T.Text, T.Text)] -> DB.ConnectionString
-createConnectionString l =
-  let f (k, v) = T.concat [k, "=", v]
-  in  encodeUtf8 (T.unwords (map f l))
-
-
-getConnectionSize :: Environment -> Int
-getConnectionSize Development = 1
-getConnectionSize Production = 8
-getConnectionSize Test = 1
 
 
 runApplication :: Config -> IO ()
@@ -156,86 +89,61 @@ scottyOptsT' state opts runActionToIO s = do
     liftIO . runSettings (settings opts) . WaiWs.websocketsOr WS.defaultConnectionOptions (CWS.application state) =<< scottyAppT runActionToIO s
 
 
-getOptions :: Environment -> IO Options
-getOptions e = do
-  s <- getSettings e
-  return def
-    { settings = s
-    , verbose = case e of
-      Development -> 1
-      Production -> 0
-      Test -> 0
-    }
-
--- should i set cors here?
-getSettings :: Environment -> IO Settings
-getSettings e = do
-  let s = defaultSettings
-      s' = case e of
-        Development -> setFdCacheDuration 0 s
-        Production -> s
-        Test -> s
-  m <- getPort'
-  let s'' = case m of
-        Nothing -> s'
-        Just p -> setPort p s'
-  return s''
-
-
-getPort' :: IO (Maybe Int)
-getPort' = do
-  -- FIXME: should come from AEC
-  m <- lookupEnv "PORT"
-  let p = case m of
-        Nothing -> Nothing
-        Just s -> Just (read s)
-  return p
-
-
 -- | Stuff to do the first time the application is ran, such as initializing the database.
 initialize :: ActionT Middle.ApiError ConfigM ()
 initialize = do
   createDefaultAdmin
 
 
+-- | Prefixes a route with the /api/v[n] prefix
+--api :: (Web.Scotty.Internal.Types.RoutePattern -> ActionT Middle.ApiError ConfigM () -> ScottyT Middle.ApiError ConfigM ()) -> Web.Scotty.Internal.Types.RoutePattern -> ScottyT Middle.ApiError ConfigM ()
+api :: (Web.Scotty.Internal.Types.RoutePattern -> t1 -> t2) -> [Char] -> t1 -> t2
+api method route action = method (Web.Scotty.Internal.Types.Capture . pack $ "/api/v" ++ show restApiVersionMajor ++ route :: Web.Scotty.Internal.Types.RoutePattern) action
+
+
 application :: Config -> ScottyT Middle.ApiError ConfigM ()
 application c = do
   let e = environment c
+
+  -- Only serve static files if testing server.
+  if e == Test
+    then middleware $ staticPolicy $ addBase "built/"
+    else middleware id  -- Is this inefficient?
+
   middleware (loggingM e)
   -- FIXME: this doesn't belong here and shouldn't always be enabled. delete this! only should be enabled on develop mode
   middleware $ cors (const . Just $ simpleCorsResourcePolicy {corsMethods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"], corsRequestHeaders=["Authorization", "Content-Type"]})
   defaultHandler (defaultH e)
   -- Rooms
   -- TODO: patch room? or will i always be doing put...
-  get "/rooms" Actions.getRoomsA
-  post "/rooms" Actions.postRoomsA
-  get "/rooms/:id" Actions.getRoomA
-  patch "/rooms/:id" Actions.patchRoomA
-  get "/rooms/search" Actions.getRoomSearchA
-  get "/rooms/:id/generate" Actions.getRoomGenerateA
-  get "/generate" Actions.getGenerateEverythingA
-  put "/rooms/:id" Actions.putRoomA
-  post "/rooms/:id/image" Actions.postRoomsImageA
-  delete "/rooms/:id" Actions.deleteRoomA
+  api get "/rooms" Actions.getRoomsA
+  api post "/rooms" Actions.postRoomsA
+  api get "/rooms/generate" Actions.getRoomsGenerateAll
+  api get "/rooms/:id" Actions.getRoomA
+  api patch "/rooms/:id" Actions.patchRoomA
+  api get "/rooms/search" Actions.getRoomSearchA
+  api get "/rooms/:id/generate" Actions.getRoomGenerateA
+  api get "/generate" Actions.getGenerateEverythingA
+  api put "/rooms/:id" Actions.putRoomA
+  api post "/rooms/:id/image" Actions.postRoomsImageA
+  api delete "/rooms/:id" Actions.deleteRoomA
   -- Portals.
   -- FIXME: the endpoint should look like /rooms/:id/portals, but it's not because the JSON serializer
   -- gets confused because it expects `belongsTo` so we just made the endpoint `/portals`!
-  post "/portals" Actions.postPortalsA
-  delete "/portals/:id" Actions.deletePortalsA
-  get "/rooms/:id/portals" Actions.getRoomsPortalsA
-  get "/portals" Actions.getPortalsA
+  api post "/portals" Actions.postPortalA
+  api delete "/portals/:id" Actions.deletePortalsA
+  api get "/rooms/:id/portals" Actions.getRoomsPortalsA
+  api get "/portals" Actions.getPortalsA
 
   -- user authorization
-  get "/users/generate" Actions.getGenerateProfiles
-  get "/users/:id/generate" Actions.getGenerateSpecificProfile
-  get "/users/whoami" Actions.getWhoamiA 
-  post "/users" Actions.postUserA
-  post "/users/login" Actions.postUserLoginA
-  -- FIXME: this is a test
-  post "/testrequire" Actions.postTestRequire
+  api get "/users/generate" Actions.getGenerateProfilesA
+  api get "/users/:id/generate" Actions.getGenerateSpecificProfileA
+  api get "/users/whoami" Actions.getWhoamiA 
+  api post "/users" Actions.postUserA
+  api post "/users/token" Actions.postUserTokenA
 
   -- rest...
-  notFound Actions.notFoundA
+  notFound ActionHelpers.notFoundA
   --initialize
 
 
@@ -246,7 +154,7 @@ loggingM Test = id
 
 
 -- | Something something!
-defaultH :: Environment -> Middle.ApiError -> Actions.Action
+defaultH :: Environment -> Middle.ApiError -> ActionHelpers.Action
 defaultH e x = do
   status internalServerError500
   let o = case e of
@@ -256,7 +164,7 @@ defaultH e x = do
   json o
 
 
--- old wsapp
+-- old wsapp... delete?
 wsapp :: WS.ServerApp
 wsapp pending = do
   putText "ws connected"

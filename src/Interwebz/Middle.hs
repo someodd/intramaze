@@ -28,6 +28,7 @@ import qualified Data.UUID as UUID
 import Interwebz.Models (RowUUID(RowUUID))
 import Slug (Slug, SlugException (..), parseSlug)
 import Control.Monad.Catch (try)
+import qualified Control.Monad.Reader as Control.Monad.Trans.Reader
 
 
 -- FIXME: rename to ApiFailure?
@@ -83,12 +84,18 @@ instance ScottyError ApiError where
 
 -- FIXME: use a helper function to get error description?
 -- hopefully generally these are reusable and not just for one specific instance. although sometimes that's unavoidable.
+-- almost a category of error?
+{- | Consistent error names, which are especially useful to match against on the JavaScript end.
+
+-}
 data ErrorName
   = DatabaseUniqueViolation
   | DatabaseNotNullViolation
   | DatabaseForeignKeyViolation
   | DatabaseCheckViolation
   | DatabaseExclusionViolation
+  | MissingField
+  -- ^ Request was missing a required field.
   | UsernameInvalid
   -- ^ Client tried to submit a username which lacks the characteristics of a proper username.
   | ResourceNotFound
@@ -161,6 +168,22 @@ catcher e (ExclusionViolation _) =
     500
     DatabaseExclusionViolation
     (show e)
+
+
+{-}
+runDbNoScotty
+  :: DB.SqlPersistT IO a
+  -> ActionT ApiError ConfigM a
+-}
+runDbNoScotty :: Control.Monad.Trans.Reader.ReaderT DB.SqlBackend IO a -> IO a
+runDbNoScotty q = do
+  conf <- getConfig
+  p <- pure $ pool conf
+  --p <- lift (asks pool)
+  s <- liftIO $ fmap Right $ DB.runSqlPool q p
+  case s of
+    Left ae -> pure ae
+    Right a -> pure a
 
 
 runDB

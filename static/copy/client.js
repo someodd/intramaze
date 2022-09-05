@@ -209,7 +209,8 @@ function removeUser(username) {
 /* old stuff below*/
 
 function createChatSocket() {
-    return new WebSocket('ws://localhost:3000/');
+    const address = "ws://" + window.location.host
+    return new WebSocket(address);
 }
 
 /**
