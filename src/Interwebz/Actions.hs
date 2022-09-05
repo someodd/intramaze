@@ -144,9 +144,8 @@ newly created room, otherwise an error message (authentication failure).
 -}
 postRoomsA :: Action
 postRoomsA = do
-  (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
-  let room = JsonRequests.genericRoomRequestValidatedRoom createRoomValidated
-  (RoomKey uuid) <- Middle.runDB (DB.insert room)
+  JsonRequests.ValidatedRoom room _ <- JsonRequests.apiErrorLeft
+  RoomKey uuid <- Middle.runDB (DB.insert room)
   filePath <- liftIO $ createNewRoom uuid room []
   status created201
   json (filePath, uuid)
@@ -164,7 +163,8 @@ maybe another action, I just don't feel like GET is right.
 getRoomGenerateA :: Action
 getRoomGenerateA = do
   (i :: RowUUID) <- param "id"
-  (_ :: UserClaims) <- JsonRequests.getUserClaimsOrFail
+  -- FIXME: should be room author or admin or fail
+  --(_ :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   roomPath <- generateRoom i
   status created201
   json roomPath
@@ -221,14 +221,19 @@ Returns the path to the uploaded image.
 -}
 postRoomsImageA :: Action
 postRoomsImageA = do
-  (i, _) <- mustBeRoomAuthorOrRoot'
+  roomUuid :: RowUUID <- param "id"
+  -- FIXME: just because I disable the bottom two lines i can now upload files?!
+  -- maybe json requests module is a really bad architecture...
+  --userClaims <- JsonRequests.getUserClaimsOrFail
+  --_ <- mustBeRoomAuthorOrRoot roomUuid userClaims
   files' <- files
-  let fileInfo = case files' of
-        ("image", fileInfo') : _ -> fileInfo'
-        _ -> error "nothing"
-      imageFileName = fileName fileInfo
-  Middle.runDB (DB.update (RoomKey i) [RoomBgFileName DB.=. Just (decodeUtf8 imageFileName)])
-  pathToImage <- liftIO $ createRoomImage i (fileContent fileInfo) (toString imageFileName)
+  fileInfo <- case files' of
+    ("image", fileInfo') : _ -> pure fileInfo'
+    _ ->
+      Middle.jsonResponse $ Middle.ApiError 400 Middle.MissingField $ "Request did not contain a file field named 'image': " ++ show files'
+  let imageFileName = fileName fileInfo
+  Middle.runDB (DB.update (RoomKey roomUuid) [RoomBgFileName DB.=. Just (decodeUtf8 imageFileName)])
+  pathToImage <- liftIO $ createRoomImage roomUuid (fileContent fileInfo) (toString imageFileName)
   status created201
   json pathToImage
 
@@ -353,7 +358,7 @@ patchRoomA :: Action
 patchRoomA = do
   -- make sure the user has permissions to change the room
   i <- param "id"
-  (JsonRequests.RoomUpdateValidated userClaims roomUpdates) <- JsonRequests.apiErrorLeft
+  (JsonRequests.ValidatedRoomUpdate userClaims roomUpdates) <- JsonRequests.apiErrorLeft
   _ <- mustBeRoomAuthorOrRoot i userClaims
 
   -- now we can start manipulation

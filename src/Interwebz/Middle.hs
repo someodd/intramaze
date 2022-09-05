@@ -84,12 +84,15 @@ instance ScottyError ApiError where
 
 -- FIXME: use a helper function to get error description?
 -- hopefully generally these are reusable and not just for one specific instance. although sometimes that's unavoidable.
+-- almost a category of error?
 data ErrorName
   = DatabaseUniqueViolation
   | DatabaseNotNullViolation
   | DatabaseForeignKeyViolation
   | DatabaseCheckViolation
   | DatabaseExclusionViolation
+  | MissingField
+  -- ^ Request was missing a required field.
   | UsernameInvalid
   -- ^ Client tried to submit a username which lacks the characteristics of a proper username.
   | ResourceNotFound

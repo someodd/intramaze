@@ -162,14 +162,12 @@ mustBeRoomAuthorOrRoot rowUuid userClaims = do
           finish
 
 {- | Same as `mustBeRoomAuthorOrRoot`, but the `JWT` and room UUID is taken from
-the request.
+the request. The Room object is submitted in request. Only for JSON requests.
 -}
 mustBeRoomAuthorOrRoot' :: ActionT Middle.ApiError ConfigM (RowUUID, Room)
 mustBeRoomAuthorOrRoot' = do
   i <- param "id"
-  (createRoomValidated :: JsonRequests.GenericRoomRequestValidated) <- JsonRequests.apiErrorLeft
-  let userClaims = JsonRequests.genericRoomRequestValidatedUserClaims createRoomValidated
-      room = JsonRequests.genericRoomRequestValidatedRoom createRoomValidated
+  (JsonRequests.ValidatedRoom room userClaims) <- JsonRequests.apiErrorLeft
   _ <- mustBeRoomAuthorOrRoot i userClaims
   pure (i, room)
 

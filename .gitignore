@@ -1,4 +1,5 @@
 dist-newstyle/
+static/copy/rooms/
 built/
 *.pem
 .env*

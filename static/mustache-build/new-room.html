@@ -17,19 +17,17 @@ title: New Room
         const jwt = getJwtCookie();
         var currentUser = await whoami(jwt);
         console.log(currentUser)
+        console.log("is this not working?")
         const response = await createRoom(getJwtCookie(), {description: description.value, author: currentUser.userId})
         console.log(response);
-        const rowUuid = response[0]  // this is actually the link? idk... FIXME
+        const rowUuid = response[1]  // this is actually the link? idk... FIXME
+        console.log("rowUUID:", response[0])
+        console.log("rowUUID:", response[1])
 
         // upload image
-        let formData = new FormData();           
-        formData.append("image", image.files[0]);
-        await fetch(restApiHost + `${rowUuid}/image`, {
-            method: "POST", 
-            body: formData,
-            headers: {Authorization: jwt}
-        });
+        const response2 = await uploadBgImageFilename(rowUuid);
+        console.log(response2);
 
-        window.location.replace(`/${rowUuid}`);
+        //window.location.replace(`/${rowUuid}`);
         }
 </script>

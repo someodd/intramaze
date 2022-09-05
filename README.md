@@ -87,12 +87,14 @@ I use Debian (unstable).
 ### ALWAYS: Generate the REST API's JWT keys
 
 You will need to generate the private key for JSON Web Tokens (regardless how
-you run):
+you run) with these two commands:
 
 ```
 openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
 openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
 ```
+
+I may include `openssl` in `nix-shell` in the future.
 
 ### Method 1: building, running using `nix`
 

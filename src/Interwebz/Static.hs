@@ -208,6 +208,12 @@ createRoomImage rowUuid fileContent fileName = do
   pure builtFilePath
 
 
+-- TODO: Generate all rooms from DB.
+--createAllRooms = do
+--  allRooms :: [DB.Entity Room] <- Middle.runDB (DB.selectList [] []) need to also select ids
+--  traverse (\row -> createNewRoom (roomId row) row)
+
+
 -- | Create the static file and directory and everything for a provided room.
 --
 -- Gives back a relative path to the new room's index inside the directory root for `buildPath`.
@@ -340,6 +346,7 @@ buildProfilePages = do
         pure (account, rooms)
 
 
+-- FIXME: build rooms
 -- TODO: Create entire site from DB. Also copies essential static files...
 -- ...
 

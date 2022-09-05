@@ -50,8 +50,28 @@ async function restApiRequest(endpoint, method, body, jwt, headers) {
     return responseJSON;
   }
 
+// FIXME: repeating code here!
+async function updateBgImageFilename(uuid, bgFileName) {
+    const jwt = getJwtCookie();
+    const response = await restApiRequest('rooms/' + uuid, 'PATCH', {bgFileName: bgFileName}, jwt)
+    console.log(response);
+    await regenerateRoom(uuid);
+}
 
-/**
+async function uploadBgImageFilename(uuid) {
+    const jwt = getJwtCookie();
+    let formData = new FormData(); 
+    var image = document.getElementById('image').files[0];        
+    formData.append("image", image);
+    await fetch(restApiHost + `rooms/${uuid}/image`, {
+        method: "POST",
+        body: formData,
+        //headers: {Authorization: jwt, "Content-Type": "multipart/form-data"}
+    });
+    //updateBgImageFilename(uuid, image.name)
+}
+
+/** FIXME: this is getting description from a document query, that's very bad!
  * Update a room's description.
  * @param {String} uuid - ID of the room to update the description of.
  */
@@ -101,10 +121,10 @@ async function deleteRoom(uuid) {
 /**
  * Make a new room.
  * @param {String} jwt - authentication.
- * @param {String} description - text which shows up on the room.
+ * @param {Object} room - the room to create.
  */
-async function createRoom(jwt, description) {
-    const response = await restApiRequest('rooms', 'POST', {description: description}, jwt)
+async function createRoom(jwt, room) {
+    const response = await restApiRequest('rooms', 'POST', room, jwt)
     console.log(response)
     return response
 }
