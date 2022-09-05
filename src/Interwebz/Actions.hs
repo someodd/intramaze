@@ -29,6 +29,7 @@ module Interwebz.Actions (
   postPortalA,
   getPortalsA,
   patchRoomA,
+  getRoomsGenerateAll,
 ) where
 
 import Control.Monad.IO.Class (liftIO)
@@ -51,7 +52,7 @@ import qualified Interwebz.JWT as JWT (makeToken)
 import qualified Interwebz.JsonRequests as JsonRequests
 import qualified Interwebz.Middle as Middle
 import Interwebz.Models (Account (..), EntityField (..), Key (..), Portal (portalBelongsTo), PortalId, Room (..), RowUUID (..), Unique (..))
-import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage, generateRoom)
+import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage, generateRoom, createAllRooms)
 import Network.HTTP.Types.Status (created201, status204)
 import Network.Wai.Parse (FileInfo (..))
 import Web.Scotty.Trans (
@@ -63,6 +64,7 @@ import Web.Scotty.Trans (
   param,
   status,
  )
+
 
 {- | Action which only returns the `UserClaims` found in the request's JWT.
 
@@ -168,6 +170,17 @@ getRoomGenerateA = do
   roomPath <- generateRoom i
   status created201
   json roomPath
+
+{- | REST endpoint for (re)generating ALL rooms.
+
+-}
+getRoomsGenerateAll :: Action
+getRoomsGenerateAll = do
+  userClaims :: UserClaims <- JsonRequests.getUserClaimsOrFail
+  needRoot userClaims "Need to be root in order to generate all the room files." $ do
+    filePaths <- createAllRooms
+    status created201
+    json $ Middle.ApiSuccess 201 [filePaths]
 
 {- | REST endpoint for creating the static HTML files for ALL the
 rooms/portals/entire site, as well as essential files.

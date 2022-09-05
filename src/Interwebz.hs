@@ -118,6 +118,7 @@ application c = do
   -- TODO: patch room? or will i always be doing put...
   api get "/rooms" Actions.getRoomsA
   api post "/rooms" Actions.postRoomsA
+  api get "/rooms/generate" Actions.getRoomsGenerateAll
   api get "/rooms/:id" Actions.getRoomA
   api patch "/rooms/:id" Actions.patchRoomA
   api get "/rooms/search" Actions.getRoomSearchA
