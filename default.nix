@@ -3,10 +3,10 @@
 , filepath, frontmatter, heroku, http-api-data, http-types, lib
 , libjwt-typed, memory, monad-logger, monad-time, mtl, mustache
 , path-pieces, persistent, persistent-postgresql, postgresql-simple
-, protolude, regex-compat, scotty, text, text-show, time
-, transformers, unordered-containers, utf8-string, uuid, vector
-, wai, wai-cors, wai-extra, wai-middleware-static, wai-websockets
-, warp, websockets
+, protolude, regex-compat, scotty, tasty, tasty-wai, text
+, text-show, time, transformers, unordered-containers, utf8-string
+, uuid, vector, wai, wai-cors, wai-extra, wai-middleware-static
+, wai-websockets, warp, websockets
 }:
 mkDerivation {
   pname = "Interwebz";
@@ -25,6 +25,7 @@ mkDerivation {
     wai-middleware-static wai-websockets warp websockets
   ];
   executableHaskellDepends = [ base ];
+  testHaskellDepends = [ base scotty tasty tasty-wai wai ];
   license = "unknown";
   mainProgram = "Interwebz";
 }

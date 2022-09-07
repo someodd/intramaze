@@ -22,7 +22,7 @@ import Interwebz.Models (migrateAll)
 import qualified Interwebz.ChatWebSocket as CWS (application, newServerState)
 import Control.Concurrent (MVar, newMVar)
 import Network.HTTP.Types.Status (internalServerError500)
-import Network.Wai (Middleware, Response)
+import Network.Wai (Middleware, Response, Application)
 import Network.Wai.Handler.Warp (runSettings, getPort)
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Web.Scotty.Trans (Options, ActionT, ScottyT, defaultHandler,
@@ -45,6 +45,9 @@ import qualified Web.Scotty.Internal.Types
 import Data.Text.Lazy (pack)
 
 
+appToIO :: Config -> ScottyT Middle.ApiError ConfigM () -> IO Application
+appToIO c app = scottyAppT (flip runReaderT c . runConfigM) app
+                           
 main :: IO ()
 main = do
   _ <- setupEssentials  -- FIXME: this should only be done with a flag.
@@ -66,7 +69,6 @@ runApplication c = do
       app = application c
   state <- newMVar CWS.newServerState
   scottyOptsT' state o r app
-
 
 -- | Run a scotty application using the warp server, passing extra options.
 --
@@ -116,7 +118,7 @@ application c = do
   defaultHandler (defaultH e)
   -- Rooms
   -- TODO: patch room? or will i always be doing put...
-  api get "/rooms" Actions.getRoomsA
+  api get "/rooms" Actions.getRoomsA  -- Get ALL? Should be put behind root perms FIXME (too intensive)
   api post "/rooms" Actions.postRoomsA
   api get "/rooms/generate" Actions.getRoomsGenerateAll
   api get "/rooms/:id" Actions.getRoomA
@@ -145,6 +147,9 @@ application c = do
   -- rest...
   notFound ActionHelpers.notFoundA
   --initialize
+
+
+
 
 
 loggingM :: Environment -> Middleware

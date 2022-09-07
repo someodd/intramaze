@@ -43,7 +43,14 @@ The files in `static` are static files used in building the site.
 
 ## Testing
 
-Try running `doctest` on `src`. It's also worth using `nix-shell`.
+Try running `doctest` on `src`. It's also worth using `nix-shell`. Soon it will
+be on the actual tests module.
+
+```
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase cabal test
+```
+
+I will be showing how to do this with `nix` instead soon.
 
 ## Building and running an Interwebz server
 
