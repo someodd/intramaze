@@ -113,3 +113,16 @@ library
         Interwebz.Database
         Template
         Slug
+
+Test-Suite Interwebz-testsuite
+  Type:                     exitcode-stdio-1.0
+  Main-is:                  Spec.hs
+  import: shared-properties
+  build-depends:
+        base==4.15.1.0,
+        tasty==1.4.2.1,
+        tasty-wai==0.1.1.1,
+        scotty==0.12,
+        wai==3.2.3,
+        Interwebz
+  hs-source-dirs:      tests
