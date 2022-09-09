@@ -136,7 +136,7 @@ the daemon to run in `Test` mode, which will handle serving the static files for
 us--the server will run on `8888`, you can now visit
 [http://localhost:8888/login.html](http://localhost:8888/login.html).
 
-### Bonus: Other ways to build and run
+### Bonus: notes on other ways to build and run
 
 You have lots of options to build an Interwebz daemon binary, as well as options
 for running an Interwebz server. Perhaps the most accessible and hands-off, but
@@ -237,9 +237,8 @@ this in Debian):
 sudo apt install postgresql postgresql-contrib
 ```
 
-Alternatively, instead of the above and running docker on your machine,  if you
-just wanted to use the Docker PostgreSQL setup instead of the above for Postgres
-you could do the below:
+Alternatively, instead of the above and running Postgres directly on your
+machine, you can just use the Docker PostgreSQL in Docker:
 
 ```
 docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.test.yml start db
