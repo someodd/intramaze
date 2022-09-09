@@ -52,7 +52,7 @@ import qualified Interwebz.JWT as JWT (makeToken)
 import qualified Interwebz.JsonRequests as JsonRequests
 import qualified Interwebz.Middle as Middle
 import Interwebz.Models (Account (..), EntityField (..), Key (..), Portal (portalBelongsTo), PortalId, Room (..), RowUUID (..), Unique (..))
-import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage, generateRoom, createAllRooms)
+import Interwebz.Static (buildProfilePages, createNewRoom, createRoomImage, generateRoom, createAllRooms, buildEverything)
 import Network.HTTP.Types.Status (created201, status204)
 import Network.Wai.Parse (FileInfo (..))
 import Web.Scotty.Trans (
@@ -192,9 +192,7 @@ getGenerateEverythingA :: Action
 getGenerateEverythingA = do
   (userClaims :: UserClaims) <- JsonRequests.getUserClaimsOrFail
   needRoot userClaims "You need to be root to generate all the static files." $ do
-    builtFiles <- buildEverything
-    status created201
-    json builtFiles
+    buildEverything
 
 {- | Generate all the static profile pages for each user.
 

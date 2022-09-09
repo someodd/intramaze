@@ -21,7 +21,6 @@ module Interwebz.ActionHelpers (
   mustBeRoomAuthorOrRoot,
   Action,
   needRoot,
-  buildEverything,
   mustMatchUuidOrRoot,
   notFoundA,
 ) where
@@ -72,22 +71,6 @@ createUserProfile rowUuid = do
           "Attempted to update the profile belonging to user of id " ++ show rowUuid ++ ", but no such user ID exists in database."
     Just account -> do
       liftIO $ buildProfile (account, rooms)
-
-
-
-{- | Create everything for the static site.
-
-Returns all the paths built.
-
-May be moved to the `Interwebz.Static` module soon.
--}
-buildEverything :: ActionT Middle.ApiError ConfigM [FilePath]
-buildEverything = do
-  (roomKeySelection :: [DB.Key Room]) <- Middle.runDB (DB.selectKeysList [] [])
-  profilePaths <- buildProfilePages
-  paths <- traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
-  builtStaticPaths <- liftIO setupEssentials
-  pure $ paths ++ builtStaticPaths ++ profilePaths
 
 {- | From row ID (`Integer`) to another Persistent key type.
 

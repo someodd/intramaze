@@ -142,6 +142,9 @@ application c = do
   api post "/users" Actions.postUserA
   api post "/users/token" Actions.postUserTokenA
 
+  -- regen everything!
+  api get "/generate" Actions.getGenerateEverythingA
+
   -- rest...
   notFound ActionHelpers.notFoundA
   --initialize

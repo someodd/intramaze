@@ -6,7 +6,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile, generateRoom, createAllRooms) where
+module Interwebz.Static (createRoomImage, createNewRoom, setupEssentials, buildProfilePages, getUserRooms, buildProfile, generateRoom, createAllRooms, buildEverything) where
 
 import GHC.Generics ( Generic )
 import qualified Data.Vector as Vector (fromList)
@@ -33,6 +33,14 @@ import Interwebz.Config (ConfigM)
 import Control.Monad.IO.Class (liftIO)
 import Database.Persist (Entity (entityVal))
 import Interwebz.Database (accountEntityToUuid, entityToRowUuid)
+import qualified Data.Aeson.Types as Aeson
+
+
+{- | JSON response for files created.
+-}
+data FilesCreatedResponse = FilesCreatedResponse
+  { filesCreated :: [FilePath]
+  } deriving (Generic, Show, Aeson.ToJSON)
 
 
 -- | Where images are stored/uploaded to. This is a hack for now.
@@ -206,11 +214,13 @@ createRoomImage rowUuid fileContent fileName = do
   pure builtFilePath
 
 
--- TODO: Generate all rooms from DB.
+{- | Generate every room's static files.
+
+-}
 createAllRooms :: ActionT Middle.ApiError ConfigM [FilePath]
 createAllRooms = do
-  allRooms :: [DB.Entity Room] <- Middle.runDB (DB.selectList [] [])
-  traverse (\entity -> entityToRowUuid entity >>= generateRoom) allRooms
+  (roomKeySelection :: [DB.Key Room]) <- Middle.runDB (DB.selectKeysList [] [])
+  traverse (\(RoomKey uuid) -> generateRoom uuid) roomKeySelection
 
 
 {- | Static generation of a room based off the RowUUID.
@@ -378,3 +388,17 @@ setupEssentials = do
   filePathsFromBuilding <- mustacheBuildThese
   adminPath <- createAdminBackend
   pure $ adminPath : filePathsFromCopying ++ filePathsFromBuilding
+
+
+{- | Builds *all* of the static files for the static site.
+
+Returns all the paths built.
+
+May be moved to the `Interwebz.Static` module soon.
+-}
+buildEverything :: ActionT Middle.ApiError ConfigM b
+buildEverything = do
+  createdRoomsPaths <- createAllRooms
+  profilePaths <- buildProfilePages
+  builtStaticPaths <- liftIO setupEssentials
+  Middle.jsonResponse $ Middle.ApiSuccess 201 $ FilesCreatedResponse $ createdRoomsPaths ++ profilePaths ++ builtStaticPaths
