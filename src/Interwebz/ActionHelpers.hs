@@ -39,7 +39,7 @@ import Interwebz.JWT (UserClaims (..))
 import qualified Interwebz.JsonRequests as JsonRequests
 import qualified Interwebz.Middle as Middle
 import Interwebz.Models
-import Interwebz.Static (buildProfile, buildProfilePages, getUserRooms, setupEssentials, generateRoom)
+import Interwebz.Static (buildProfile, getUserRooms)
 
 -- | The default kind of action we use throughout the source.
 type Action = ActionT Middle.ApiError ConfigM ()
