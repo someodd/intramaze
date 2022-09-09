@@ -41,13 +41,102 @@ The files in `static` are static files used in building the site.
   * `static/mustache` is simply for templates that get used to build pages.
   * `static/copy` are files that only get copied to `built/` and nothing else
 
-## Testing
-
-Try running `doctest` on `src`. It's also worth using `nix-shell`.
-
 ## Building and running an Interwebz server
 
-You can run your own Interwebz server which has the potential to link to other Interwebz servers.
+You can run your own Interwebz server which has the potential to link to other
+Interwebz servers.
+
+The primary supported way to build, run, and develop Interwebz is by using
+`nixpkgs` and `nix-shell`.
+
+Enter the developer environment with the command:
+
+```
+nix-shell
+```
+
+You'll then be inside of an environment which gives you the same tools (Docker,
+GHC, formatters, cabal, etc.) that I use.
+
+It may seem like I use Stack, but the `stack.yaml` file is only here as a hacky
+fix, if I remember correctly, for Nixpkgs.
+
+Please read `CONTRIBUTING.md` for more details if you plan on developing.
+
+### Step 1: Generate the REST API's JWT keys
+
+You will need to generate the private key for JSON Web Tokens (regardless how
+you run) with these two commands:
+
+```
+openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
+openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
+```
+
+I may include `openssl` in `nix-shell` in the future.
+
+### Step 2: building, running using `nix`
+
+Nix gives you one command to build the project and a shell/environment, all with
+the same packages/tools/etc. at your disposal. That means you don't have to have
+anything installed or configured except for having the Nix package manager
+installed. This way we can be sure that we're all using the same versions and
+that it (hopefully) works regardless of our operating system (as far as all the
+tools and the project itself allows).
+
+I'm using `nix-build` and `nix-shell` v2.10.3.
+
+Build the project's daemon binary with:
+
+```
+nix-build release.nix
+```
+
+It should output the binary to `./result/bin/Interwebz`.
+
+Building with `nix` is ideal for releases and simply building for use, but is
+probably too slow to use practically while developing and testing.
+
+### Step 3: Running Postgres
+
+Postgres in `nix-shell` (for dev/testing) or vanilla (without `nix-shell`)
+
+You can run a developer/local test Postgres database like this with `nix-shell`:
+
+If you plan to use a local development Postgres server, set up postgres in `nix-shell` like this:
+
+```
+[nix-shell:~/Projects/Interwebz]$ initdb -D .tmp/mydb
+...
+[nix-shell:~/Projects/Interwebz]$ pg_ctl -D .tmp/mydb -o "-k /tmp" -l logfile start
+waiting for server to start.... done
+server started
+```
+
+You can stop the above Postgres setup with `pg_ctl -D .tmp/mydb stop`.
+
+Regardless if you are using `nix-shell` or not, you need to end your Postgres
+setup like this, in order to configure the database:
+
+```
+psql -p 5432 -h localhost -e postgres -f docker/postgres/init.sql
+```
+
+### Step 4: Run the daemon
+
+Run the binary built by `nix-build`:
+
+```shell
+env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase ./result/bin/Interwebz
+```
+
+The above will build the static files and run the REST API, which both manages
+the database and handles updating the static files. The above command also tells
+the daemon to run in `Test` mode, which will handle serving the static files for
+us--the server will run on `8888`, you can now visit
+[http://localhost:8888/login.html](http://localhost:8888/login.html).
+
+### Bonus: Other ways to build and run
 
 You have lots of options to build an Interwebz daemon binary, as well as options
 for running an Interwebz server. Perhaps the most accessible and hands-off, but
@@ -84,55 +173,7 @@ Here are some various options for the Postgres (database) daemon:
 
 I use Debian (unstable).
 
-### ALWAYS: Generate the REST API's JWT keys
-
-You will need to generate the private key for JSON Web Tokens (regardless how
-you run) with these two commands:
-
-```
-openssl ecparam -name secp256k1 -genkey -noout -out jwt-priv-sig-key.pem
-openssl ec -in jwt-priv-sig-key.pem -pubout > jwt-pub-sig-key.pem
-```
-
-I may include `openssl` in `nix-shell` in the future.
-
-### Method 1: building, running using `nix`
-
-Nix gives you one command to build the project and a shell/environment, all with
-the same packages/tools/etc. at your disposal. That means you don't have to have
-anything installed or configured except for having the Nix package manager
-installed. This way we can be sure that we're all using the same versions and
-that it (hopefully) works regardless of our operating system (as far as all the
-tools and the project itself allows).
-
-I'm using `nix-build` and `nix-shell` v2.10.3.
-
-Build the project's daemon binary with:
-
-```
-nix-build release.nix
-```
-
-It should output the binary to `./result/bin/Interwebz`.
-
-#### `nix-shell`
-
-Enter the developer environment with the command:
-
-```
-nix-shell
-```
-
-You'll then be inside of an environment which gives you the same tools (Docker,
-GHC, formatters, cabal, etc.) that I use.
-
-It may seem like I use Stack, but the `stack.yaml` file is only here as a hacky
-fix, if I remember correctly, for Nixpkgs.
-
-For more information on how this project uses `nix-shell`, please see
-`CONTRIBUTING.md` and also the *Method 3: vanilla* section.
-
-### Method 2: running it all with Docker
+#### Docker (production)
 
 This section shows you how to get Interwebz working entirely in/with Docker.
 There is a Docker production config and a Docker testing config.
@@ -177,7 +218,7 @@ volume ls`. Read more about volumes, including backing up and restoring, on [the
 official Docker volumes
 documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
 
-### Method 3: vanilla
+#### No Docker or Nix (vanilla, production)
 
 This section is devoted to demonstrating how you can set up the server yourself.
 
@@ -187,76 +228,30 @@ Install the depends (you can skip this if you use `nix-shell`):
 sudo apt install libjwt zlib1g-dev libpq-dev libjwt-dev
 ```
 
-#### Vanilla step 1: Postgres
+##### Vanilla step 1: Postgres
 
-There are three different options for running a Postgres daemon (for the database).
-
-I apologize for the messiness of this section. I will consolidate (there's not
-much of a difference between the `nix-shell` commands and other method as I am
-making it out to be at the moment) and clean up this information in the future.
-
-##### Postgres in `nix-shell` (for dev/testing) or vanilla (without `nix-shell`)
-
-You can run a developer/local test Postgres database like this with `nix-shell`:
-
-If you plan to use a local development Postgres server, set up postgres in `nix-shell` like this:
-
-```
-[nix-shell:~/Projects/Interwebz]$ initdb -D .tmp/mydb
-...
-[nix-shell:~/Projects/Interwebz]$ pg_ctl -D .tmp/mydb -o "-k /tmp" -l logfile start
-waiting for server to start.... done
-server started
-```
-
-You can stop the above Postgres setup with `pg_ctl -D .tmp/mydb stop`.
-
-On the other hand, if instead of the above you plan to setup a production
-database on your machine you need to install postgres (I do this in Debian):
+Setup a production database on your machine you need to install postgres (I do
+this in Debian):
 
 ```
 sudo apt install postgresql postgresql-contrib
 ```
 
-Regardless if you are using `nix-shell` or not, you need to end your Postgres
-setup like this, in order to configure the database:
-
-```
-psql -p 5432 -h localhost -e postgres -f docker/postgres/init.sql
-```
-
-##### Postgres using Docker (production)
-
-If you just wanted to use the Docker PostgreSQL setup instead of the above for
-Postgres you could do the below:
+Alternatively, instead of the above and running docker on your machine,  if you
+just wanted to use the Docker PostgreSQL setup instead of the above for Postgres
+you could do the below:
 
 ```
 docker compose --verbose -f docker/docker-compose.yml -f docker/docker-compose.test.yml start db
 ```
 
-#### Vanilla step 2: run the daemon
-
-Run with Cabal:
-
-```shell
-env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase cabal run
-```
-
-You can also run using the binary built by `nix-build`:
-
-```shell
-env SCOTTY_ENV=Test SCOTTY_SITE_TITLE=IntraMaze PORT=8888 SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/testpgdatabase ./result/bin/Interwebz
-```
-
-The above will build the static files and run the REST API, which both manages
-the database and handles updating the static files. The above command also tells
-the daemon to run in `Test` mode, which will handle serving the static files for
-us--the server will run on `8888`, you can now visit
-[http://localhost:8888/login.html](http://localhost:8888/login.html).
-
 Note that if you are using the Docker postgres setup you'll want to use
 `SCOTTY_DATABASE_URL=postgres://testpguser:testpguser@localhost:5432/postgres`
 instead. I don't know why (some Docker Compose Postgres image thing, maybe).
+
+#### Vanilla step 2: run the daemon
+
+You probably want to run using the binary from `nix-build`.
 
 #### Vanilla step 3: serve the static files
 
