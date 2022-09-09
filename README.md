@@ -173,7 +173,7 @@ Here are some various options for the Postgres (database) daemon:
 
 I use Debian (unstable).
 
-#### Docker (production)
+#### Another way to run: Docker (production)
 
 This section shows you how to get Interwebz working entirely in/with Docker.
 There is a Docker production config and a Docker testing config.
@@ -218,7 +218,7 @@ volume ls`. Read more about volumes, including backing up and restoring, on [the
 official Docker volumes
 documentation](https://docs.docker.com/storage/volumes/#back-up-a-volume).
 
-#### No Docker or Nix (vanilla, production)
+#### Yet another way to run: vanilla (No Docker or Nix)
 
 This section is devoted to demonstrating how you can set up the server yourself.
 
