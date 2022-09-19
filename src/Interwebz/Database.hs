@@ -52,6 +52,8 @@ accountEntityToUuid' = either (\(errorName, errorMessage) -> Middle.jsonResponse
 {- | Create a user account.
 
 Handles actions for failure purposes.
+
+This may return the created `RowUUID` in the future.
 -}
 createAccount :: Middle.Catcher () -> Text -> Text -> ActionT Middle.ApiError ConfigM ()
 createAccount catcher username password = do

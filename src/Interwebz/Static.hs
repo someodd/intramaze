@@ -316,6 +316,7 @@ buildProfile (account, rooms) = do
     , ("usernameSlug", MTypes.String usernameSlug)
     , ("rooms", MTypes.Array . Vector.fromList $ fmap toMustache rooms)
     ]
+  _ <- liftIO $ createDirectoryIfMissing True usersDirectory
   _ <- writeFile pathOut $ unpack pageText
   pure pathOut
 
@@ -371,6 +372,7 @@ buildProfilePages = do
 
 
 -- FIXME: build rooms
+-- Doesn't do anything that uses the database...
 -- TODO: Create entire site from DB. Also copies essential static files...
 -- ...
 
