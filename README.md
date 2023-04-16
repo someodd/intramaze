@@ -97,6 +97,18 @@ It should output the binary to `./result/bin/Interwebz`.
 Building with `nix` is ideal for releases and simply building for use, but is
 probably too slow to use practically while developing and testing.
 
+#### Configure cachix
+
+This will dramatically speed up building.
+
+https://docs.cachix.org/getting-started
+
+The cache URL is: https://interwebz.cachix.org
+
+#### Using Docker with `nix`
+
+The environment is setup to make...
+
 ### Step 3: Running Postgres
 
 Postgres in `nix-shell` (for dev/testing) or vanilla (without `nix-shell`)
@@ -255,7 +267,8 @@ You probably want to run using the binary from `nix-build`.
 #### Vanilla step 3: serve the static files
 
 You can skip this step if you're running the daemon in `Test` mode, as described
-in *Vanilla step 2: run the daemon*.
+in *Vanilla step 2: run the daemon*. You can also skip this section because there
+is a built-in static file service.
 
 The last step is to serve `built/` static files directory. For production it's
 recommended you use something like nginx, Apache, or some kind of cloud service.
@@ -263,3 +276,7 @@ This section will only cover local development.
 
 You can also use something like `simplehttp2server` or `python3 -m http.server`
 to serve the `built/` directory (for testing and debugging).
+
+If you serve via another method you may run into some bugs. Something to watch
+out for is make sure the static listening address is the same as the server/REST
+daemons.
