@@ -148,7 +148,7 @@ the daemon to run in `Test` mode, which will handle serving the static files for
 us--the server will run on `8888`, you can now visit
 [http://localhost:8888/login.html](http://localhost:8888/login.html).
 
-### Bonus: notes on other ways to build and run
+### Alternative ways to build and run
 
 You have lots of options to build an Interwebz daemon binary, as well as options
 for running an Interwebz server. Perhaps the most accessible and hands-off, but
